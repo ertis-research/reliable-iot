@@ -7,3 +7,6 @@
 [submodule "IoT_Web"]
 	path = IoT_Web
 	url = https://github.com/StefanSympax/IoT_Web.git
+[submodule "IoT_Register"]
+	path = IoT_Register
+	url = https://github.com/StefanSympax/IoT_Register.git
