@@ -1,0 +1,73 @@
+IMAGE=marcel1691/leshan
+CONTAINER=leshan
+PORT=32400
+
+# Usage
+all:
+	@echo "usage:\n \
+		make build - Image builden\n \
+		make run - Image starten\n \
+		make stop - Image stoppen\n \
+		make bash - Bash Shell in gestarteten Container oeffnen\n \
+		make debug - Container mit Bash statt ENTRYPOINT Eintrag starten\n\
+		make logs - stdout vom Container anzeigen\n\
+		make diff - veraenderte Dateien anzeigen"
+
+# Docker Image builden
+build:
+	docker build -t $(IMAGE) .
+
+# Docker Image detached starten
+run: 
+	docker run -d -p $(PORT):8080 -p 5683:5683/udp --restart=always -h $(CONTAINER) --name $(CONTAINER) $(IMAGE)
+
+# Shell im laufenden Container aufrufen	
+bash:
+	docker exec -it $(CONTAINER) bash
+	
+# Browser mit Daten anzeigen
+show:
+	chromium-browser http://localhost:$(PORT)
+	
+# Docker Container stoppen und zerstoeren
+stop:
+	docker stop -t 0 $(CONTAINER)
+	docker rm $(CONTAINER)
+
+	
+# Docker Container nur mit bash starten	statt Eintrag in ENTRYPOINT
+debug:
+	docker run -t -i -p $(PORT):8080 -p 5683:5683/udp --name $(CONTAINER) -h $(CONTAINER) --entrypoint=/bin/bash $(IMAGE)
+
+# Ausgabe auf stdout	
+logs:
+	docker logs $(CONTAINER)
+
+# Veraenderte Dateien	
+diff:
+	docker diff $(CONTAINER)		
+	
+# Image pushen
+push:
+	docker tag $(IMAGE) localhost:5000/$(CONTAINER)
+	docker push localhost:5000/$(CONTAINER)
+	docker rmi localhost:5000/$(CONTAINER)
+	
+# Image pushen (Raspberry Pi)
+push.rpi:
+	docker tag $(IMAGE) localhost:5000/$(CONTAINER).rpi
+	docker push localhost:5000/$(CONTAINER).rpi
+	docker rmi localhost:5000/$(CONTAINER).rpi	
+	
+# Image von localhost holen	
+pull:
+	docker pull localhost:5000/$(CONTAINER)
+	docker tag localhost:5000/$(CONTAINER) $(IMAGE)
+	docker rmi localhost:5000/$(CONTAINER)
+	
+# Image von localhost holen (Raspberry Pi)
+pull.rpi:
+	docker pull localhost:5000/$(CONTAINER).rpi
+	docker tag localhost:5000/$(CONTAINER).rpi $(IMAGE)
+	docker rmi localhost:5000/$(CONTAINER).rpi	
+	
