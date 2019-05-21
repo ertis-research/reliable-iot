@@ -1,0 +1,62 @@
+{% extends "base.html" %}
+{% block content %}
+
+<div class="row">
+    <div class="col-lg-12 text-center">
+        <h1>Applications <span class="glyphicon glyphicon-list-alt" aria-hidden="true"></span></h1>
+
+    </div>
+</div>
+<br/>
+
+{% if apps %}
+<div class="row">
+    <div class="col-md-2"></div>
+    <div class="col-md-8">
+        <table class="table">
+            <thead>
+            <th>Name</th>
+            <th>Interests</th>
+            </thead>
+            <tbody>
+            {% for app in apps %}
+            <tr>
+                <td>{{app.name}}</td>
+                <td>
+                    {% for interest in app.interests %}
+
+                        {{interest}}<br/>
+
+                    {%endfor%}
+                </td>
+            </tr>
+            {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    <div class="col-md-2"></div>
+</div>
+{% else %}
+<div class="row">
+    <div class="col-lg-12 text-center">
+        <div class="col-md-3"></div>
+        <div class="col-md-6 bg-warning warning_mesagge">
+            <label>There are no active Applications yet.</label>
+        </div>
+        <div class="col-md-3"></div>
+
+    </div>
+</div>
+
+{% endif %}
+<br/><br/>
+        <script type="text/javascript">
+            window.onload = function() {
+                if(!window.location.hash) {
+                    window.location = window.location + '#loaded';
+                    window.location.reload();
+                }
+            }
+        </script>
+
+{% endblock content %}

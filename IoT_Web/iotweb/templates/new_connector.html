@@ -1,0 +1,45 @@
+{% extends "base.html" %}
+{% block content %}
+
+<div class="row">
+    <div class="col-lg-12 text-center">
+        <h1>New Iot Connector <span class="glyphicon glyphicon-list-alt" aria-hidden="true"></span></h1>
+    </div>
+</div>
+<br/>
+<br/>
+<div class="row">
+    <div class="col-md-2"></div>
+    <div class="col-md-8">
+        <form class="form-horizontal" role="form" action="" method="post">
+            <div class="form-group">
+                <label for="inputType" class="col-sm-3 control-label">Type</label>
+                <div class="col-sm-6">
+                    <input type="text" class="form-control" name="inputType" id="inputType" placeholder="IoT Connector type" required>
+                </div>
+            </div>
+
+            <div class="form-group">
+                <label for="inputImage" class="col-sm-3 control-label">Docker Image</label>
+                <div class="col-sm-6">
+                    <input type="text" class="form-control" name="inputImage" id="inputImage" placeholder="Docker image" required>
+                </div>
+            </div>
+
+            <div class="form-group text-center">
+
+                <a class="btn btn-default " href="/connectors/">
+                    Cancel
+                </a>
+                <button type="submit" value="submit" class="btn btn-success" onclick="return confirm('Are you sure?')">
+                    Create
+                    <span style="margin-left: 5px;" class="glyphicon glyphicon-floppy-disk" aria-hidden="true"></span>
+                </button>
+            </div>
+        </form>
+    </div>
+    <div class="col-md-2"></div>
+</div>
+
+{% endblock content %}
+

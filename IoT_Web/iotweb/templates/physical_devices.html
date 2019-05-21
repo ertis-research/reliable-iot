@@ -1,0 +1,96 @@
+{% extends "base.html" %}
+{% block content %}
+
+<div class="row">
+    <div class="col-lg-12 text-center">
+        <h1>Physical Registered Devices <span class="glyphicon glyphicon-list-alt" aria-hidden="true"></span></h1>
+
+    </div>
+
+    <div class="col-lg-12 text-center">
+        <h3>Shadow {{shadow_id}} </span></h3>
+
+    </div>
+</div>
+<br/>
+{% if devices %}
+<div class="row">
+    <div class="col-md-1"></div>
+    <div class="col-md-10">
+        <table class="table">
+            <thead>
+            <th>Type</th>
+            <th>Last time connected</th>
+            <th>Status</th>
+            <th>Token</th>
+
+            </thead>
+            <tbody>
+            {% for device in devices %}
+            <tr>
+                <td>{{ device.type }}</td>
+                <td>{{ device.last }} timestamp </td>
+                <td align="center">
+                    {% if device.STATUS == 'USING'%}
+                        <span class='dot' style="background-color: #FFA500;"></span>
+                    {% endif %}
+
+                    {% if device.STATUS == 'NOT_USING'%}
+                        <span class='dot' style="background-color: #33FE01;"></span>
+                    {% endif %}
+
+                    {% if device.STATUS == 'DOWN'%}
+                        <span class='dot' style="background-color: #FF0000;"></span>
+                    {% endif %}
+
+                </td>
+                <td style="word-break: break-all;">{{ device.token }}</td>
+
+                <td>
+                    <a class="btn btn-primary" href="/viewDeviceResources/{{device.id}}/">
+                        Resources
+                        <span style="margin-left: 5px;" class="glyphicon glyphicon-search" aria-hidden="true"></span>
+                    </a>
+                </td>
+
+                <td>
+                    <form method="post">
+                        <input type="hidden" id="device" name="device_id" value="{{device.id}}">
+                        <button class="btn btn-danger" type="submit" value="submit" onclick="return confirm('Are you sure?')">
+                            Delete
+                            <span style="margin-left: 5px;" class="glyphicon glyphicon-trash" aria-hidden="true"></span>
+                        </button>
+                    </form>
+                </td>
+
+            </tr>
+            {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    <div class="col-md-1"></div>
+</div>
+{% else %}
+<div class="row">
+    <div class="col-lg-12 text-center">
+        <div class="col-md-3"></div>
+        <div class="col-md-6 bg-warning warning_mesagge">
+            <label>There are no physical devices registered in this shadow device yet.</label>
+        </div>
+        <div class="col-md-3"></div>
+
+    </div>
+</div>
+
+{% endif %}
+
+        <script type="text/javascript">
+            window.onload = function() {
+                if(!window.location.hash) {
+                    window.location = window.location + '#loaded';
+                    window.location.reload();
+                }
+            }
+        </script>
+
+{% endblock content %}

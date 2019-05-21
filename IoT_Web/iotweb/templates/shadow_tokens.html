@@ -1,0 +1,80 @@
+{% extends "base.html" %}
+{% block content %}
+
+<div class="row">
+    <div class="col-lg-12 text-center">
+        <h1>Shadow Tokens <span class="glyphicon glyphicon-list-alt" aria-hidden="true"></span></h1>
+
+    </div>
+</div>
+<br/>
+<div class="row">
+    <div class="col-md-3"></div>
+
+    <a class="btn btn-success" href="/newToken/{{shadow}}/" onclick="return confirm('Are you sure?')">
+        Create token
+        <span style="margin-left: 5px;" class="glyphicon glyphicon-plus" aria-hidden="true"></span>
+    </a>
+
+    <div class="col-md-2"></div>
+</div>
+
+<br/>
+<br/>
+
+{% if tokens %}
+<div class="row">
+    <div class="col-md-1"></div>
+    <div class="col-md-10">
+        <table class="table">
+            <thead>
+            <th>Token</th>
+            <th>Status</th>
+            </thead>
+            <tbody>
+            {% for tk in tokens %}
+            <tr>
+                <td style="word-break: break-all;">{{ tk.token }}</td>
+                <td align="center"><br/>{{ tk.status}}</td>
+                <td>
+                    <br/>
+                    <form method="post">
+                        <input type="hidden" id="token" name="token" value="{{tk.token}}">
+                        <button class="btn btn-warning" type="submit" value="submit" onclick="return confirm('Are you sure?')">
+                            Revoke
+                            <span style="margin-left: 5px;" class="glyphicon glyphicon-remove" aria-hidden="true"></span>
+                        </button>
+                    </form>
+                </td>
+
+            </tr>
+            {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    <div class="col-md-1"></div>
+</div>
+{% else %}
+<div class="row">
+    <div class="col-lg-12 text-center">
+        <div class="col-md-3"></div>
+        <div class="col-md-6 bg-warning warning_mesagge">
+            <label>There are no tokens associated to this Shadow device yet.</label>
+        </div>
+        <div class="col-md-3"></div>
+
+    </div>
+</div>
+
+{% endif %}
+
+        <script type="text/javascript">
+            window.onload = function() {
+                if(!window.location.hash) {
+                    window.location = window.location + '#loaded';
+                    window.location.reload();
+                }
+            }
+        </script>
+
+{% endblock content %}

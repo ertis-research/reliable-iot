@@ -1,0 +1,7 @@
+certifi
+chardet
+idna
+requests
+six
+sseclient-py
+kafka-python

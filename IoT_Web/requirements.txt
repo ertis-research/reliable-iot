@@ -1,0 +1,8 @@
+certifi
+chardet
+Django
+idna
+pytz
+requests
+sqlparse
+
