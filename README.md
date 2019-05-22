@@ -1,7 +1,9 @@
 # reliable-iot
-From the Edge to the Cloud: enabling reliable IoT applications
 
 ***UNDER DEVELOPMENT***
+
+From the Edge to the Cloud: enabling reliable IoT applications
+
 
 This Project focuses on the application of fault-tolerance techniques for IoT systems
 on a cloud-fog architecture.
