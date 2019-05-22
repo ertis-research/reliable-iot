@@ -13,7 +13,7 @@ class Resource(mongoengine.Document):
 class Endpoint(mongoengine.Document):
     _id = mongoengine.StringField(required=True, primary_key=True)
     name = mongoengine.StringField(required=True)
-    leshan_id = mongoengine.StringField(required=True)
+    leshan_id = mongoengine.StringField(unique=True)  # Mqtt wont have this, so, not required
     available = mongoengine.BooleanField(default=True)
     address = mongoengine.StringField(required=True)
     resources = mongoengine.ListField(mongoengine.ReferenceField(Resource), default=[])
@@ -64,7 +64,11 @@ class ResourceUse(mongoengine.Document):
     _id = mongoengine.StringField(required=True, primary_key=True)
     # reverse_delete_rule=mongoengine.CASCADE means that if the Application/Resource referenced is deleted, the EndpointUse too
     application = mongoengine.ReferenceField(Application, reverse_delete_rule=mongoengine.CASCADE, required=True)
+    shadow = mongoengine.ReferenceField(Shadow, reverse_delete_rule=mongoengine.CASCADE, required=True)
+    iot_connector = mongoengine.ReferenceField(IotConnector, reverse_delete_rule=mongoengine.CASCADE, required=True)
+    endpoint = mongoengine.ReferenceField(Endpoint, reverse_delete_rule=mongoengine.CASCADE, required=True)
     resource = mongoengine.ReferenceField(Resource, reverse_delete_rule=mongoengine.CASCADE, required=True)
+    kafka_topic = mongoengine.StringField(required=True)
 
 
 # This collection stores a Type of IOT DEVICE and an associated docker command to deploy it

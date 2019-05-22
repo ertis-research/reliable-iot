@@ -1,4 +1,4 @@
-from kafka import KafkaClient, KafkaProducer, KafkaConsumer
+from kafka import KafkaProducer, KafkaConsumer
 import aux_functions
 import sseclient  # install sseclient-py library
 import requests
@@ -12,13 +12,12 @@ def get_data_stream(token, api_endpoint, device_data):
     kafka_producer = KafkaProducer(bootstrap_servers='kafka:9094',
                                    client_id=device_data['_id'],
                                    value_serializer=lambda v: json.dumps(v).encode('utf-8'),
-                                   # value_deserializer=lambda m: json.loads(m.decode('utf-8'))
                                    )
 
     headers = {
-        # 'Authorization': "Bearer {0}".format(token),
         'Accept': 'text/event-stream'
     }
+
     http = urllib3.PoolManager()
 
     # get response, handling redirects (307) if needed
@@ -43,26 +42,36 @@ def get_data_stream(token, api_endpoint, device_data):
 
         if event_type == 'UPDATED':  # updates periodically incoming
             data_to_store = aux_functions.purge_update_data(event.data)
-            aux_functions.execute_endpoint_update(data_to_store, token)
-            kafka_producer.send('RegisterTopic', {'id_list': [event.data]})
+            data = {'event': json.dumps(data_to_store)}  # event data as JSON
+            endpoint_id = aux_functions.get_endpoint_id(data_to_store['registrationId'], token)
+
+            aux_functions.update_endpoint(endpoint_id, data, token)
 
         elif event_type == 'REGISTRATION':
             endpoint = json.loads(event.data)
-            endpoints_id_list = aux_functions.store_endpoints_and_resources(endpoint, device_data['_id'], token)
-
-            # inform to recovery shadow at topic RegisterTopic when new endpoints registered in the Iot Connector
-            kafka_producer.send('RegisterTopic', {'id_list': endpoints_id_list})
+            aux_functions.store_endpoints_and_resources(endpoint, device_data['_id'], token)
 
         elif event_type == 'DEREGISTRATION':  # we do not delete the data, we set status to 0, which means, unavailable
             endpoint = json.loads(event.data)
-            aux_functions.deregistration_endpoint_and_resources(endpoint['registrationId'], token)
+            endpoint_id = aux_functions.get_endpoint_id(endpoint['registrationId'], token)
+            aux_functions.update_endpoint(endpoint_id, {'status': 0}, token)
 
-            # inform to recovery shadow when new device has fallen down at topic FailureTopic
-            kafka_producer.send('FailureTopic', {'leshan_id': endpoint['registrationId']})
+            failure_data_recovery = {
+                'connector_id': device_data['_id'],
+                'endpoint_id': endpoint_id
+            }
 
-        elif event_type == 'NOTIFICATION':
-            endpoint = json.loads(event.data)
-            endpoints_id_list = aux_functions.store_endpoints_and_resources(endpoint, device_data['_id'], token)
+            # inform to recovery shadow when a device has fallen down at topic FailureTopic
+            kafka_producer.send('FailureTopic', failure_data_recovery)
+
+        elif event_type == 'NOTIFICATION':  # Working on it
+            pass
+            # data_observed = json.loads(event.data)
+            # kafka_producer.send('', {'leshan_id': endpoint['registrationId']})
+
+            # kind of event received
+            # event: NOTIFICATION
+            # from Leshan:  {"ep": "C1", "res": "/3303/0/5700", "val": {"id": 5700, "value": 18.1}}
 
 
 def read(device_ip, device_port, endpoint_name, accessing, resource_code, kafka_topic, kafka_producer):
@@ -132,17 +141,18 @@ def execute(device_ip, device_port, endpoint_name, accessing, resource_code_rese
     return success
 
 
-def observe(device_ip, device_port, endpoint_name, accessing, resource_code):
+def observe(device_ip, device_port, endpoint_name, accessing, resource_code):  # Not working, we are on it. :D
     '''Given the following Resource data, this method starts the observation of its value'''
+    # url = 'http://{}:{}/api/clients/{}/{}/{}/observe?format=JSON'
+    # url.format(device_ip, device_port, endpoint_name, accessing, resource_code)
+    # requests.post(url=url)
 
-    url = 'http://{}:{}/api/clients/{}/{}/{}/observe?format=JSON'
-    url.format(device_ip, device_port, endpoint_name, accessing, resource_code)
-    requests.post(url=url)
 
 
-def delete(device_ip, device_port, endpoint_name, accessing, resource_code):
+
+def delete(device_ip, device_port, endpoint_name, accessing, resource_code):  # same here
     """stops an observation"""
-    url = 'http://{}:{}/api/clients/{}/{}/{}/observe'
-    url.format(device_ip, device_port, endpoint_name, accessing, resource_code)
-    requests.delete(url=url)
+    # url = 'http://{}:{}/api/clients/{}/{}/{}/observe'
+    # url.format(device_ip, device_port, endpoint_name, accessing, resource_code)
+    # requests.delete(url=url)
 

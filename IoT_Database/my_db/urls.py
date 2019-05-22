@@ -19,8 +19,9 @@ urlpatterns = [
 
     # THESE ROUTES ARE FOR ENDPOINTS
     path('storeEndpoint/', endpoint_view.store_endpoint),
-    path('getEndpoint/<str:leshan_id>/', endpoint_view.get_endpoint),
-    path('updateEndpoint/<str:leshan_id>/', endpoint_view.update_endpoint),
+    path('getEndpointById/<str:ep_id>/', endpoint_view.get_endpoint_by_id),
+    path('getEndpointByLeshanId/<str:leshan_id>/', endpoint_view.get_endpoint_by_leshanid),
+    path('updateEndpoint/<str:ep_id>/', endpoint_view.update_endpoint),
 
     # THESE ROUTES ARE FOR RESOURCES
     path('storeResource/', resource_view.store_resource),

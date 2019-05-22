@@ -261,15 +261,9 @@ def get_device_resources(request, dev_id):
                 dev_endpoints = device.endpoints
 
                 for endpoint in dev_endpoints:  # iterator over endpoints
-                    try:
-                        resources = endpoint.resources
-                        for res in resources:  # iterator over resources
-                            try:
-                                res_list.append(res.to_json())
-                            except:
-                                endpoint.update(pull__resources=res)  # remove possible db reference inconsistency
-                    except:
-                        device.update(pull__endpoints=endpoint)  # remove possible db reference inconsistency
+                    resources = endpoint.resources
+                    for res in resources:  # iterator over resources
+                        res_list.append(res.to_json())
 
             return http.JsonResponse(data={'resources': res_list}, status=HTTPStatus.OK)
         else:

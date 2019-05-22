@@ -97,6 +97,23 @@ def ep_store_request(data, token):
     return ep_id
 
 
+def ep_get_request(leshan_id, token):
+    '''
+    Performs a request to the Database API in order to store an Endpoint
+
+    :param leshan_id:String
+    :param token: String
+    :return: int
+    '''
+
+    headers = {'Authorization': 'Token {}'.format(token)}
+    store_url = db_url + 'getEndpointByLeshanId/{}/'.format(leshan_id)
+    response = requests.get(url=store_url, headers=headers)
+    ep_id = json.loads(response.text)['endpoint_id']
+
+    return ep_id
+
+
 def res_store_request(data, token):
     '''
     Performs a request to the Database API in order to store a Resource
@@ -135,7 +152,7 @@ def store_endpoints_and_resources(endpoint_list, device_id, token):
         "secure":false,"additionalRegistrationAttributes":{}}
         ]
  )
-    :param endpoint_list: Dict
+    :param endpoint_list: List of dicts
     :param device_id: String
     :param token: String
     :return: None
@@ -174,35 +191,34 @@ def store_endpoints_and_resources(endpoint_list, device_id, token):
     return device_endpoint_ids
 
 
-def deregistration_endpoint_and_resources(endpoint_id, token):
+def update_endpoint(endpoint_id, data, token):
     '''
-    Given an endpoint id, this method updates the Database endpoint and resources setting their status to 0 "down"
+    Given an endpoint id some data and a valid token, this method updates the Database
+    endpoint and resources (if status is modified)
 
     :param endpoint_id: String
+    :param data: dict
     :param token: String
     :return: None
     '''
 
     headers = {'Authorization': 'Token {}'.format(token)}
     update_endpoint_url = db_url + 'updateEndpoint/{}/'.format(endpoint_id)
-    data = {'status': 0}
-
-    # ENDPOINT STATUS UPDATE - In the database all it's resources are updated as well
-    requests.put(url=update_endpoint_url, data=data, headers=headers)
+    requests.post(url=update_endpoint_url, data=data, headers=headers)
 
 
-def execute_endpoint_update(data_to_store, token):
-    '''
-    Given update information to store, this method send a request to the Database API to update an endpoint
+def get_endpoint_id(leshan_id, token):
+    """
+    Given a leshan id, this method queries the endpoint and returns the database endpoint _id
+    :param leshan_id:
+    :param token:
+    :return: id or None
+    """
 
-    :param data_to_store: Dict
-    :param token: String
-    :return: None
-    '''
-
-    update_url = db_url + 'updateEndpoint/{}/'.format(data_to_store['registrationId'])
     headers = {'Authorization': 'Token {}'.format(token)}
+    update_endpoint_url = db_url + 'getEndpointByLeshanId/{}/'.format(leshan_id)
+    r = requests.get(url=update_endpoint_url, headers=headers)
+    if r.status_code == 200:
+        return json.loads(r.text)['endpoint_id']
 
-    requests.put(url=update_url, data={'event': json.dumps(data_to_store)}, headers=headers)
-
-
+    return None
