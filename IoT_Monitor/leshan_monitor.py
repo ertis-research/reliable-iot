@@ -6,7 +6,7 @@ import urllib3
 import json
 
 
-def get_data_stream(token, api_endpoint, device_data):
+def get_data_stream(token, api_endpoint, device_data, shadow_device_id):
     """ Start REST streaming device events given a Nest token.  """
 
     kafka_producer = KafkaProducer(bootstrap_servers='kafka:9094',
@@ -56,7 +56,8 @@ def get_data_stream(token, api_endpoint, device_data):
             endpoint_id = aux_functions.get_endpoint_id(endpoint['registrationId'], token)
             aux_functions.update_endpoint(endpoint_id, {'status': 0}, token)
 
-            failure_data_recovery = {
+            failure_data_recovery = {  # for now this info will be enough (it may change)
+                'shadow_id': shadow_device_id,
                 'connector_id': device_data['_id'],
                 'endpoint_id': endpoint_id
             }

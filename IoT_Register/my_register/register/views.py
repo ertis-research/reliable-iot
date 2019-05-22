@@ -41,7 +41,8 @@ def register(request):
                 docker_client = docker.from_env()
                 docker_environment_variables = [
                     'IOT_CONNECTOR_ID={}'.format(device_info['_id']),
-                    'IOT_DEVICE_TOKEN={}'.format(token)
+                    'IOT_DEVICE_TOKEN={}'.format(token),
+                    'SHADOW_ID={}'.format(device_data_to_store['Shadow_id'])
                 ]
 
                 networks = ['IOT_default']

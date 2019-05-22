@@ -15,23 +15,21 @@ import requests
 import json
 
 
-kafka_producer = KafkaProducer(bootstrap_servers='127.0.0.1:9094',
+kafka_producer = KafkaProducer(bootstrap_servers='127.0.0.1:9094',  # for local tests
+                             # bootstrap_servers='kafka:9094',  # for swarm
                                client_id="iot_recovery_module",
                                value_serializer=lambda v: json.dumps(v).encode('utf-8'),
                                )
 
-kafka_consumer = KafkaConsumer(bootstrap_servers='127.0.0.1:9094',
+kafka_consumer = KafkaConsumer(bootstrap_servers='127.0.0.1:9094',  # for local tests
+                               # bootstrap_servers='kafka:9094',  # for swarm
                                auto_offset_reset='earliest',
                                value_deserializer=lambda m: json.loads(m.decode('utf-8'))
                                )
 
-kafka_consumer.subscribe(['xTopic'])
+kafka_consumer.subscribe(['FailureTopic'])
 
-# print(kafka_consumer.topics())
 
 for message in kafka_consumer:
     json_object = message.value
-
-
-    if ''
-
+    "toDo"
