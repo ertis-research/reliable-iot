@@ -1,6 +1,7 @@
+from .UsefulData import Token, KfkAdminClient, KfkProducer, URL
 from http import HTTPStatus
 from django import http
-from .UsefulData import Token, KfkAdminClient, KfkProducer
+
 import requests
 import json
 
@@ -32,7 +33,7 @@ def interest(request):
             code_to_return, data = request_similar(token, request.POST)
 
             # we store the new app or we update
-            url_store_update = Token.DB_URL + 'storeOrUpdateApp/{}/'.format(request.POST['app_name'])
+            url_store_update = URL.DB_URL + 'storeOrUpdateApp/{}/'.format(request.POST['app_name'])
             x = {"resource_accessing": request.POST["resource_accessing"],
                  "operation": request.POST['operation'],
                  "status": code_to_return.name}
@@ -114,7 +115,7 @@ def request_similar(token, data_):
     headers = {'Authorization': 'Token {}'.format(token.token)}
 
     # get the resource endpoint
-    url_check_res = Token.DB_URL + 'getSimilarResource/'
+    url_check_res = URL.DB_URL + 'getSimilarResource/'
     resource_code = data_['resource_accessing'].split('/')[1]
     data = {"resource_code": resource_code}
 

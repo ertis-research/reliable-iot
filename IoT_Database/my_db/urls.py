@@ -1,5 +1,6 @@
 from my_db.restful_API.modular_views import web_login_register_view
 from my_db.restful_API.modular_views import docker_commands_view
+from my_db.restful_API.modular_views import app_resource_usage
 from my_db.restful_API.modular_views import application_view
 from my_db.restful_API.modular_views import register_view
 from my_db.restful_API.modular_views import endpoint_view
@@ -57,15 +58,18 @@ urlpatterns = [
     path('getShadowTokens/<str:shdw_id>/', shadow_view.get_shadow_tokens),
     path('getShadowDevices/<str:shdw_id>/', shadow_view.get_shadow_devices),
 
-    # THESE ARE FOR APPS
+    # THESE ROUTES ARE FOR APPS
     path('getAllApps/', application_view.get_all),
     path('storeOrUpdateApp/<str:name>/', application_view.store_or_update_app),
     path('deleteApp/<str:name>/', application_view.delete_app),
 
-    # THESE ARE FOR USER CRUD
+    # THESE ROUTES ARE FOR RESOURCE USAGE
+    path('getUsageByEpShadow/<str:ep_id>/<str:shdw_id>/', app_resource_usage.get_resource_use_by_epid_shdwid),
+
+    # THESE ROUTES ARE FOR USER CRUD
     path('updateUser/<str:usr_id>/', user_view.update_user),
 
-    # THESE ARE FOR LOGIN / LOG OUT AND REGISTER
+    # THESE ROUTES ARE FOR LOGIN / LOG OUT AND REGISTER
     path('login/', web_login_register_view.login),
     path('registerUser/', web_login_register_view.register),
 ]

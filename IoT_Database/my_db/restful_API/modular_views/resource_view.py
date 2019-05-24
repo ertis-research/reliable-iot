@@ -167,7 +167,7 @@ def delete_resource(request, res_id):
                 sts = HTTPStatus.OK
 
             else:
-                data = {'data': 'Not found.'}
+                data = {'data': HTTPStatus.NOT_FOUND.name}
                 sts = HTTPStatus.NOT_FOUND
 
             return http.JsonResponse(data=data, status=sts)
