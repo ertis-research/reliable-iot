@@ -32,7 +32,7 @@ def devices(request, shdw_id):
 
             return HttpResponse(template.render(context, request))
 
-    else:  # GET - RENDER THE TEMPLATE WITH SHADOWS DEVICES
+    else:  # GET - RENDER THE TEMPLATE WITH PHYSICAL DEVICES
 
         template = loader.get_template('../templates/physical_devices.html')
 

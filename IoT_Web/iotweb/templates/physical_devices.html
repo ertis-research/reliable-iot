@@ -20,7 +20,6 @@
         <table class="table">
             <thead>
             <th>Type</th>
-            <th>Last time connected</th>
             <th>Status</th>
             <th>Token</th>
 
@@ -29,7 +28,6 @@
             {% for device in devices %}
             <tr>
                 <td>{{ device.type }}</td>
-                <td>{{ device.last }} timestamp </td>
                 <td align="center">
                     {% if device.STATUS == 'USING'%}
                         <span class='dot' style="background-color: #FFA500;"></span>

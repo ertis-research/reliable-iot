@@ -33,7 +33,6 @@
                     {% for key, value in resources.items %}
                     <tr>
                         <td>/{{ key }}</td>
-                        <td>{{ res_kind }} is this temperature ? </td>
                         <td>{{ value }}</td>
                     </tr>
                     {% endfor %}
@@ -54,7 +53,6 @@
                     {% for resource in resources %}
                     <tr>
                         <td>/{{ resource.type }}</td>
-                        <td>{{ res_kind }} is this temperature ? </td>
                         <td align="left">
                             {% if resource.STATUS == 'USING'%}
                                 <span class='dot' style="background-color: #FFA500;"></span>
