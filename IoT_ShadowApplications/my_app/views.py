@@ -30,7 +30,7 @@ def interest(request):
             headers = {'Authorization': 'Token {}'.format(token.token)}
 
             # We check the availability of the resource
-            code_to_return, data = request_similar(token, request.POST)
+            code_to_return, data = request_similar_resource(token, request.POST)
 
             # we store the new app or we update
             url_store_update = URL.DB_URL + 'storeOrUpdateApp/{}/'.format(request.POST['app_name'])
@@ -75,30 +75,37 @@ def action(request):
 
     if request.POST:
         if "resource_accessing" in request.POST and "app_name" in request.POST and "operation" in request.POST:
+            producer = KfkProducer.get_instance()
+            admin = KfkAdminClient.get_instance()
 
-            code_to_return, data = request_similar(token, request.POST)
-            message = {"Message": code_to_return.name}
+            # check if logic is already created
+            data, code_to_return = logic_already_created(token, request.POST)
 
-            if data['success']:
-                producer = KfkProducer.get_instance()
-                admin = KfkAdminClient.get_instance()
+            if not data['success']:  # there is no similar logic created
 
-                new_topic_name = data['id_iotconnector']+request.POST['app_name']
+                code_to_return, data = request_similar_resource(token, request.POST)
+                message = {"Message": code_to_return.name}
 
-                # we create a new topic between the final app and the iot connector
-                # topic name will be a combination of Iot_connector id and app name (e.g. "1234finalapp")
-                admin.create_topics([new_topic_name])
+                if data['success']:
+                    new_topic_name = data['id_iotconnector']+request.POST['app_name']
 
-                # We tell the iot connector to do the action asked for
+                    # we create a new topic between the final app and the iot connector
+                    # topic name will be a combination of Iot_connector id and app name (e.g. "1234finalapp")
+                    admin.create_topics([new_topic_name])
 
-                iot_connector_data = {'operation': request.POST['operation'],
-                                      'resource_accessing': request.POST['resource_accessing'],
-                                      'kafka_topic': new_topic_name
-                                      }
+                    # We tell the iot connector to do the action asked for
 
-                producer.sent(data['id_iotconnector'], iot_connector_data)
+                    iot_connector_data = {'operation': request.POST['operation'],
+                                          'resource_accessing': request.POST['resource_accessing'],
+                                          'kafka_topic': new_topic_name
+                                          }
 
-                message = {"Message": 'Success', "kafka_topic": new_topic_name}
+                    producer.sent(data['id_iotconnector'], iot_connector_data)
+
+                    message = {"Message": 'Success', "kafka_topic": new_topic_name}
+
+            else:  # if similar logic already created we only return the topic to the app
+                message = {"Message": 'Success', "kafka_topic": data['kafka_topic']}
         else:
             code_to_return = HTTPStatus.BAD_REQUEST
             message = {"Message": code_to_return.name}
@@ -111,24 +118,50 @@ def action(request):
 
 # ------------------------------------------SOME AUX METHODS--------------------------------------------------------
 
-def request_similar(token, data_):
+def request_similar_resource(token, data_):
+    """If a similar resource to the data_ passed exists, this method gets and returns it """
+
     headers = {'Authorization': 'Token {}'.format(token.token)}
 
     # get the resource endpoint
-    url_check_res = URL.DB_URL + 'getSimilarResource/'
+    url_check_res = URL.DB_URL + 'getSimilarResource/{}/'  # only res code if shadow id not passed
     resource_code = data_['resource_accessing'].split('/')[1]
-    data = {"resource_code": resource_code}
+    url_check_res.format(resource_code)
 
-    if "shadow_id" in data:
-        data['shadow_id'] = data['shadow_id']
+    if "shadow_id" in data_:
+        url_check_res += "{}/".format(data_['shadow_id'])
 
-    req = requests.post(url=url_check_res, data=data, headers=headers)
+    req = requests.get(url=url_check_res, headers=headers)
 
-    code_to_return = HTTPStatus.OK
+    code_to_return = HTTPStatus.NOT_FOUND
     data_to_return = {}
 
-    if req.status_code != HTTPStatus.OK:
-        code_to_return = HTTPStatus.NOT_FOUND
+    if req.status_code == HTTPStatus.OK:
+        code_to_return = HTTPStatus.OK
         data_to_return = json.loads(req.text)
+
+    return code_to_return, data_to_return
+
+
+def logic_already_created(token, data_):
+    """If a logic is already created, this method gets and returns it """
+
+    resource_code = data_['resource_accessing'].split('/')[1]
+
+    headers = {'Authorization': 'Token {}'.format(token.token)}
+    url = URL.DB_URL + 'getCreatedLogic/{}/{}/{}/'.format(
+        data_['shadow_id'],
+        resource_code,
+        data_['operation']
+    )
+
+    req = requests.get(url=url, headers=headers)
+
+    code_to_return = HTTPStatus.NOT_FOUND
+    data_to_return = {}
+
+    if req.status_code == HTTPStatus.OK:
+        code_to_return = HTTPStatus.OK
+        data_to_return = json.loads(req.text)  # {'kafka_topic': <topic> }
 
     return code_to_return, data_to_return

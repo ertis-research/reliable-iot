@@ -28,7 +28,7 @@ def get_resource(request, res_id):
         return http.JsonResponse(data={'message': "Authentication credentials not provided"}, status=HTTPStatus.BAD_REQUEST)
 
 
-def get_similar_resource(request):
+def get_similar_resource(request, res_code, shdw_id=None):
     """
     Given info through the data body, this method tries to look for a similar resource as indicated.
     Body data example:
@@ -43,37 +43,36 @@ def get_similar_resource(request):
         # CHECK THE TOKEN
         if core.validate(token):
 
-            if 'resource_code' in request.POST:
-                data_to_return = {'success': False}
-                code_to_return = HTTPStatus.NOT_FOUND
+            # we suppose it's false at beginning
+            data_to_return = {'success': False}
+            code_to_return = HTTPStatus.NOT_FOUND
 
-                if 'shadow_id' in request.POST:  # we search only in this shadow
-                    shadow = Shadow.objects.with_id(request.POST['shadow_id'])
-                    if shadow:
-                        data_result, \
-                            code_to_return \
-                            = search_res_in_shadow(shadow, int(request.POST['resource_code']))
+            if shdw_id:  # we search only in this shadow
+                shadow = Shadow.objects.with_id(shdw_id)
+                if shadow:
+                    data_result, \
+                        code_to_return \
+                        = search_res_in_shadow(shadow, int(res_code))
 
+                    data_to_return.update(data_result)
+
+                else:  # shadow doesn't exist
+                    return http.JsonResponse(data={'message': 'Shadow does not exist.'},
+                                             status=HTTPStatus.BAD_REQUEST)
+
+            else:  # We search in every shadow
+                shadows = Shadow.objects()
+                for shadow in shadows:
+                    data_result, \
+                        code_to_return \
+                        = search_res_in_shadow(shadow, int(res_code))
+
+                    if data_result["success"]:  # if true means it's been found
                         data_to_return.update(data_result)
+                        break
 
-                    else:  # shadow doesn't exist
-                        return http.JsonResponse(data={'message': 'Shadow does not exist.'},
-                                                 status=HTTPStatus.BAD_REQUEST)
+            return http.JsonResponse(data=data_to_return, status=code_to_return)
 
-                else:  # We search in every shadow
-                    shadows = Shadow.objects()
-                    for shadow in shadows:
-                        data_result, \
-                            code_to_return \
-                            = search_res_in_shadow(shadow, int(request.POST['resource_code']))
-
-                        if data_result["success"]:  # if true means it's been found
-                            data_to_return.update(data_result)
-                            break
-
-                return http.JsonResponse(data=data_to_return, status=code_to_return)
-            else:
-                return http.JsonResponse(data={'message': 'Resource code not passed.'}, status=HTTPStatus.BAD_REQUEST)
 
         else:
             return http.JsonResponse(data={'message': 'Token invalid or expired.'}, status=HTTPStatus.UNAUTHORIZED)

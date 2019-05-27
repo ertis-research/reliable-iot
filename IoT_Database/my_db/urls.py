@@ -32,7 +32,8 @@ urlpatterns = [
     path('getShadowResources/<str:shdw_id>/', resource_view.get_shadow_resources),
     path('getDeviceResources/<str:dev_id>/', resource_view.get_device_resources),
     path('getResourceStatus/<str:res_id>/', resource_view.resource_status),
-    path('getSimilarResource/', resource_view.get_similar_resource),
+    path('getSimilarResource/<str:res_code>/', resource_view.get_similar_resource),
+    path('getSimilarResource/<str:res_code>/<str:shdw_id>/', resource_view.get_similar_resource),
 
     # THESE ROUTES ARE FOR DOCKER COMMANDS
     path('storeType/', docker_commands_view.store_type),
@@ -65,6 +66,7 @@ urlpatterns = [
 
     # THESE ROUTES ARE FOR RESOURCE USAGE
     path('getUsageByEpShadow/<str:ep_id>/<str:shdw_id>/', app_resource_usage.get_resource_use_by_epid_shdwid),
+    path('getCreatedLogic/<str:shdw_id>/<str:res_code>/<str:operation>/', app_resource_usage.get_similar_logic),
 
     # THESE ROUTES ARE FOR USER CRUD
     path('updateUser/<str:usr_id>/', user_view.update_user),

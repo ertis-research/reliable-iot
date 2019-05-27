@@ -32,6 +32,28 @@ def get_resource_use_by_epid_shdwid(request, ep_id, shdw_id):
                                  status=HTTPStatus.BAD_REQUEST)
 
 
+def get_similar_logic(request, shdw_id, res_code, operation):
+    if request.META.get('HTTP_AUTHORIZATION'):  # This checks if token is passed
+        token = request.META.get('HTTP_AUTHORIZATION').split(' ')[1]  # 'Token adsad' -> ['Token', 'adsad'] -> 'adsad'
+
+        # CHECK THE TOKEN
+        if core.validate(token):
+            logic_list = ResourceUse.objects(shadow=shdw_id, operation=operation)
+
+            for logic in logic_list:
+                if logic.resource.type == int(res_code):
+                    kafka_topic = logic.kafka_topic
+                    return http.JsonResponse(data={'kafka_topic': kafka_topic}, status=HTTPStatus.OK)
+
+            # if program reaches this point, no similar logic was found
+            return http.JsonResponse(data={'Message': HTTPStatus.NOT_FOUND.name}, status=HTTPStatus.NOT_FOUND)
+        else:
+            return http.JsonResponse(data={'message': 'Token invalid or expired.'}, status=HTTPStatus.UNAUTHORIZED)
+    else:
+        return http.JsonResponse(data={'message': "Authentication credentials not provided"},
+                                 status=HTTPStatus.BAD_REQUEST)
+
+
 def create(request):
     """
         This method creates a new usage  entry in the DB.
