@@ -1,4 +1,4 @@
-from my_db.db_mongo.model import Application
+from my_db.db_mongo.model import Application, ResourceUse
 from my_db.restful_API.auth import core
 from my_db.db_mongo import mongo_setup
 from http import HTTPStatus
@@ -95,10 +95,21 @@ def delete_app(request, name):
 
             if app.count():
                 app = app.first()
+
+                usages = ResourceUse.objects(applications=app._id)
+
+                for usage in usages:
+                    usage.update(pull__applications=app)
+
+                    aux = ResourceUse.objects.with_id(usage._id)
+                    # if all the apps are deleted, the resource is not used anymore
+                    if not aux.applications:
+                        aux.delete()
+
                 try:
                     app.delete()
                     code_to_return = HTTPStatus.OK
-                    data_to_return = {'message': 'Success'}
+                    data_to_return = {'message': "Success"}
                 except:
                     return http.HttpResponseServerError(content=json.dumps({'message': 'Error Deleting'}),
                                                         status=HTTPStatus.INTERNAL_SERVER_ERROR)

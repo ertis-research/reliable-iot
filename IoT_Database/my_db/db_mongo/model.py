@@ -62,8 +62,8 @@ class Application(mongoengine.Document):
 # this table is a M-M relationship betweet Applications and Resources
 class ResourceUse(mongoengine.Document):
     _id = mongoengine.StringField(required=True, primary_key=True)
+    applications = mongoengine.ListField(mongoengine.ReferenceField(Application), required=True)
     # reverse_delete_rule=mongoengine.CASCADE means that if the Application/Resource referenced is deleted, the EndpointUse too
-    application = mongoengine.ReferenceField(Application, reverse_delete_rule=mongoengine.CASCADE, required=True)
     shadow = mongoengine.ReferenceField(Shadow, reverse_delete_rule=mongoengine.CASCADE, required=True)
     iot_connector = mongoengine.ReferenceField(IotConnector, reverse_delete_rule=mongoengine.CASCADE, required=True)
     endpoint = mongoengine.ReferenceField(Endpoint, reverse_delete_rule=mongoengine.CASCADE, required=True)

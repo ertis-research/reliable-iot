@@ -60,11 +60,12 @@ def create(request):
 
         data e.g:
         {
-            'application': <app_id>,
+            'application': <app_name>,
             'shadow': <shadow_id>,
             'iot_connector': <connector_id>,
             'endpoint': <endpoint_id>,
             'resource': <resource_id>,
+            'operation': <operation>,
             'kafka_topic': <kafka_topic>
         }
 
@@ -80,7 +81,7 @@ def create(request):
             data = request.POST
 
             connector = IotConnector.objects.with_id(data['iot_connector']); connector.save()
-            app = Application.objects.with_id(data['application']); app.save()
+            app = Application.objects(name=data['application']).first(); app.save()
             res = Resource.objects.with_id(data['resource']); res.save()
             shdw = Shadow.objects.with_id(data['shadow']); shdw.save()
             ep = Endpoint.objects.with_id(data['endpoint']); ep.save()
@@ -93,6 +94,7 @@ def create(request):
             new_usage.endpoint = ep.to_dbref()
             new_usage.resource = res.to_dbref()
             new_usage.kafka_topic = data['kafka_topic']
+            new_usage.operation = data['operation']
             new_usage.save()
 
             return http.JsonResponse(data={'message': HTTPStatus.OK.name}, status=HTTPStatus.OK)
@@ -113,7 +115,8 @@ def update(request, obj_id):
         'iot_connector': <connector_id>,
         'endpoint': <endpoint_id>,
         'resource': <resource_id>,
-        'kafka_topic': <kafka_topic>
+        'kafka_topic': <kafka_topic>,
+        'application': <app_name>
     }
 
     All fields in the data dict are optional.
@@ -130,6 +133,14 @@ def update(request, obj_id):
             usage = ResourceUse.objects.with_id(obj_id)  # it could be None (if it's not in the db)
 
             if usage:
+
+                if 'application' in data:
+                    new_app = data['application']
+                    app = Application.objects(name=new_app)
+                    if app.count():
+                        app = app.first()
+                        app.save()
+                        usage.applications.append(app.to_dbref())
 
                 if 'shadow' in data:
                     new_shadow = data['shadow']

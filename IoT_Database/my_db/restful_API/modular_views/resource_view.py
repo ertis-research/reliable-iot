@@ -293,7 +293,14 @@ def search_res_in_shadow(shadow, res_type):
 
             for resource in resources_list:  # iterating over Resource
                 if resource.type == res_type and resource.status:
-                    data_to_return.update({"success": True, 'id_iotconnector': device._id, 'id_endpoint': endpoint._id})
+                    data_to_return.update(
+                        {
+                            "success": True,
+                            'id_iotconnector': device._id,
+                            'id_endpoint': endpoint._id,
+                            'id_resource': resource._id
+                        }
+                    )
                     code_to_return = HTTPStatus.OK
                     return data_to_return, code_to_return
 

@@ -87,14 +87,24 @@ def action(request):
                 message = {"Message": code_to_return.name}
 
                 if data['success']:
-                    new_topic_name = data['id_iotconnector']+request.POST['app_name']
-
+                    new_topic_name = data['id_iotconnector'] + request.POST['app_name']
                     # we create a new topic between the final app and the iot connector
                     # topic name will be a combination of Iot_connector id and app name (e.g. "1234finalapp")
                     admin.create_topics([new_topic_name])
 
-                    # We tell the iot connector to do the action asked for
+                    # we store the new usage in the database
+                    _data = {
+                        'application': request.POST['app_name'],
+                        'iot_connector': data['id_iotconnector'],
+                        'shadow': request.POST['shadow_id'],
+                        'endpoint': data['id_endpoint'],
+                        'resource': data['id_resource'],
+                        'operation': request.POST['operation'],
+                        'kafka_topic': new_topic_name
+                    }
+                    store_usage_data(token, _data)
 
+                    # We tell the iot connector to do the action asked for
                     iot_connector_data = {'operation': request.POST['operation'],
                                           'resource_accessing': request.POST['resource_accessing'],
                                           'kafka_topic': new_topic_name
@@ -106,6 +116,7 @@ def action(request):
 
             else:  # if similar logic already created we only return the topic to the app
                 message = {"Message": 'Success', "kafka_topic": data['kafka_topic']}
+                update_usage_data(token, {"application": request.POST['app_name']})
         else:
             code_to_return = HTTPStatus.BAD_REQUEST
             message = {"Message": code_to_return.name}
@@ -165,3 +176,18 @@ def logic_already_created(token, data_):
         data_to_return = json.loads(req.text)  # {'kafka_topic': <topic> }
 
     return code_to_return, data_to_return
+
+
+def store_usage_data(token, data_):
+    headers = {'Authorization': 'Token {}'.format(token.token)}
+
+    url = URL.DB_URL + 'createUsageResource/'
+    requests.post(url=url, data=data_, headers=headers)
+
+
+def update_usage_data(token, data_):
+    headers = {'Authorization': 'Token {}'.format(token.token)}
+
+    url = URL.DB_URL + 'updateUsageResource/'
+    requests.post(url=url, data=data_, headers=headers)
+
