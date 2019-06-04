@@ -71,14 +71,14 @@ for message in kafka_consumer:
         json_object_message['endpoint_id'],
         json_object_message['shadow_id'])
 
-    response = requests.get(url=request_url)
+    response = requests.get(url=request_url, headers=headers)
 
     if response.status_code == 200:
         res_usage_list = json.loads(response.text)['usages']
 
         for res_usage in res_usage_list:
-            aux_res_usage = json.loads(res_usage)  # serialize string to json object an store it into local var aux
-            applications = aux_res_usage['applications']  # list of app ids
+            aux_res_usage = json.loads(res_usage)  # serialize string to json object and store it into local var aux
+            applications = aux_res_usage['applications']  # list of app ids using this resource
 
             for application in applications:
                 recovery(application,
