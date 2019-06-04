@@ -14,7 +14,7 @@ def interest(request):
             "app_name": <a name> (mandatory)
             "shadow_id": <an id> (optional),
             "resource_accessing": <...> ( mandatory | e.g. /3303/1/5700 )
-            "operation" : <...> (optional | OBSERVE / READ / WRITE / EXECUTE)
+            "operation" : <...> (optional | OBSERVE / READ / WRITE / EXECUTE / DELETE / DELETE_OBSERVATION)
         }
 
     Returns:
@@ -59,7 +59,8 @@ def action(request):
             "app_name": <a name> (mandatory)
             "shadow_id": <an id> (optional),
             "resource_accessing": <...> ( mandatory | e.g. /3303/1/5700 )
-            "operation" : <...> (madatory | OBSERVE / READ / WRITE / EXECUTE)
+            "operation" : <...> (madatory | OBSERVE / READ / WRITE / EXECUTE / DELETE)
+            "data": {} (mandatory for WRITE operation)
         }
 
     NOTE: This method should be called after having called the interest method and make sure the resource that's being
@@ -68,7 +69,7 @@ def action(request):
     ******THIS METHOD DOES NOT CHECK IF THE INTEREST METHOD WAS CALLED BEFORE********
 
     Returns:
-        - Kafka_topic: <string> if
+        - Kafka_topic: <string> 
     '''
 
     token = Token.get_instance()
@@ -99,6 +100,7 @@ def action(request):
                         'shadow': request.POST['shadow_id'],
                         'endpoint': data['id_endpoint'],
                         'resource': data['id_resource'],
+                        'accessing': request.POST['resource_accessing'],
                         'operation': request.POST['operation'],
                         'kafka_topic': new_topic_name
                     }
@@ -107,8 +109,12 @@ def action(request):
                     # We tell the iot connector to do the action asked for
                     iot_connector_data = {'operation': request.POST['operation'],
                                           'resource_accessing': request.POST['resource_accessing'],
-                                          'kafka_topic': new_topic_name
+                                          'kafka_topic': new_topic_name,
+                                          'endpoint_name': data['name_endpoint']
                                           }
+
+                    if "data" in request.POST and request.POST['operation'] == 'WRITE':
+                        iot_connector_data['data'] = request.POST['data']
 
                     producer.sent(data['id_iotconnector'], iot_connector_data)
 

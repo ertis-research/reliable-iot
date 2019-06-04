@@ -60,9 +60,10 @@ urlpatterns = [
     path('getShadowDevices/<str:shdw_id>/', shadow_view.get_shadow_devices),
 
     # THESE ROUTES ARE FOR APPS
+    path('getApp/<str:app_id>/', application_view.get_app),
     path('getAllApps/', application_view.get_all),
     path('storeOrUpdateApp/<str:name>/', application_view.store_or_update_app),
-    path('deleteApp/<str:name>/', application_view.delete_app),
+    path('deleteApp/<str:app_id>/', application_view.delete_app),
 
     # THESE ROUTES ARE FOR RESOURCE USAGE
     path('getUsageByEpShadow/<str:ep_id>/<str:shdw_id>/', app_resource_usage.get_resource_use_by_epid_shdwid),

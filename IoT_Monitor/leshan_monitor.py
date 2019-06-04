@@ -1,9 +1,14 @@
 from kafka import KafkaProducer, KafkaConsumer
+from kafka_consumer_thread import KfkConsumer
+from shared_buffer import SharedBuffer
 import aux_functions
 import sseclient  # install sseclient-py library
 import requests
 import urllib3
 import json
+
+
+kafka_observe_topics = {}  # "/3303/0/5700": "topic_name"
 
 
 def get_data_stream(token, api_endpoint, device_data, shadow_device_id):
@@ -14,9 +19,23 @@ def get_data_stream(token, api_endpoint, device_data, shadow_device_id):
                                    value_serializer=lambda v: json.dumps(v).encode('utf-8'),
                                    )
 
+    kafka_consumer = KafkaConsumer(bootstrap_servers='kafka:9094',
+                                   value_deserializer=lambda m: json.loads(m.decode('utf-8'))
+                                   )
+
+    # we start a thread that constantly reads from kafka
+    t = KfkConsumer(consumer=kafka_consumer)
+    t.start()
+
+    # t.join()
+
     headers = {
         'Accept': 'text/event-stream'
     }
+
+    shared_buffer_object = SharedBuffer.get_instance()
+    sh_semaphore = shared_buffer_object.shared_semaphore
+    sh_buffer = shared_buffer_object.buffer
 
     http = urllib3.PoolManager()
 
@@ -40,6 +59,14 @@ def get_data_stream(token, api_endpoint, device_data, shadow_device_id):
     for event in client.events():  # returns a generator
         event_type = event.event
 
+        # Message check
+        try:
+            read_and_execute_action_from_buffer(sh_semaphore, sh_buffer, device_data, kafka_producer)
+        except IndexError:
+            # it means there's no message in the buffer
+            sh_semaphore.release()
+
+        # Event check
         if event_type == 'UPDATED':  # updates periodically incoming
             data_to_store = aux_functions.purge_update_data(event.data)
             data = {'event': json.dumps(data_to_store)}  # event data as JSON
@@ -66,16 +93,14 @@ def get_data_stream(token, api_endpoint, device_data, shadow_device_id):
             kafka_producer.send('FailureTopic', failure_data_recovery)
 
         elif event_type == 'NOTIFICATION':  # Working on it
-            pass
-            # data_observed = json.loads(event.data)
-            # kafka_producer.send('', {'leshan_id': endpoint['registrationId']})
+            # data_observed e.g. = {"ep": "C1", "res": "/3303/0/5700", "val": {"id": 5700, "value": 18.1}}
+            data_observed = json.loads(event.data)
 
-            # kind of event received
-            # event: NOTIFICATION
-            # from Leshan:  {"ep": "C1", "res": "/3303/0/5700", "val": {"id": 5700, "value": 18.1}}
+            kafka_topic = kafka_observe_topics.get(data_observed['res'])
+            kafka_producer.send(kafka_topic, data_observed['val'])
 
 
-def read(device_ip, device_port, endpoint_name, accessing, resource_code, kafka_topic, kafka_producer):
+def read(device_ip, device_port, endpoint_name, accessing, kafka_topic, kafka_producer):
     '''
     This method will read the value of a desired resource and return its value.
     Resources route are like the following: accessing/code = /3303/0/5601 (accessing= /3303/0, code=5601)
@@ -84,8 +109,8 @@ def read(device_ip, device_port, endpoint_name, accessing, resource_code, kafka_
 
     '''
 
-    url = 'http://{}:{}/api/clients/{}/{}/{}?format=JSON'
-    url.format(device_ip, device_port, endpoint_name, accessing, resource_code)
+    url = 'http://{}:{}/api/clients/{}/{}?format=JSON'
+    url.format(device_ip, device_port, endpoint_name, accessing)
     request = requests.get(url=url)
 
     if request.status_code == 200:
@@ -103,7 +128,7 @@ def read(device_ip, device_port, endpoint_name, accessing, resource_code, kafka_
     kafka_producer.send(kafka_topic, data_to_send)
 
 
-def write(device_ip, device_port, endpoint_name, accessing, resource_code, data):
+def write(device_ip, device_port, endpoint_name, accessing, data):
     '''
     This method will try to write the passed values into a desired resource and return True if Success or False otherwise.
     Resources route are like the following: accessing/code = /3303/0/5601 (accessing= /3303/0, code=5601)
@@ -112,8 +137,8 @@ def write(device_ip, device_port, endpoint_name, accessing, resource_code, data)
 
     '''
 
-    url = 'http://{}:{}/api/clients/{}/{}/{}?format=JSON'
-    url.format(device_ip, device_port, endpoint_name, accessing, resource_code)
+    url = 'http://{}:{}/api/clients/{}/{}?format=JSON'
+    url.format(device_ip, device_port, endpoint_name, accessing)
 
     # json will set content-type to "application/json", otherwise it fails
     response = requests.put(url=url, json=data)
@@ -125,14 +150,14 @@ def write(device_ip, device_port, endpoint_name, accessing, resource_code, data)
     return success
 
 
-def execute(device_ip, device_port, endpoint_name, accessing, resource_code_reset):
+def execute(device_ip, device_port, endpoint_name, accessing):
     '''
     This method will make the operation EXECUTE of the desired resource and return its code status or error in case of fail.
     Resources route are like the following: accessing/code = /3303/0/5601 (accessing= /3303/0, code=5601)
     '''
 
-    url = 'http://{}:{}/api/clients/{}/{}/{}'
-    url.format(device_ip, device_port, endpoint_name, accessing, resource_code_reset)
+    url = 'http://{}:{}/api/clients/{}/{}'
+    url.format(device_ip, device_port, endpoint_name, accessing)
     response = requests.post(url=url)
     success = True
 
@@ -142,18 +167,92 @@ def execute(device_ip, device_port, endpoint_name, accessing, resource_code_rese
     return success
 
 
-def observe(device_ip, device_port, endpoint_name, accessing, resource_code):  # Not working, we are on it. :D
+def observe(device_ip, device_port, endpoint_name, accessing, kafka_topic):
     '''Given the following Resource data, this method starts the observation of its value'''
-    # url = 'http://{}:{}/api/clients/{}/{}/{}/observe?format=JSON'
-    # url.format(device_ip, device_port, endpoint_name, accessing, resource_code)
-    # requests.post(url=url)
+
+    kafka_observe_topics[accessing] = kafka_topic
+
+    url = 'http://{}:{}/api/clients/{}/{}/observe?format=JSON'
+    url.format(device_ip, device_port, endpoint_name, accessing)
+    requests.post(url=url)
 
 
+def delete_observation(device_ip, device_port, endpoint_name, accessing):
+    """This method stops an observation when it's required"""
+
+    url = 'http://{}:{}/api/clients/{}/{}/observe'
+    url.format(device_ip, device_port, endpoint_name, accessing)
+    requests.delete(url=url)
 
 
-def delete(device_ip, device_port, endpoint_name, accessing, resource_code):  # same here
-    """stops an observation"""
-    # url = 'http://{}:{}/api/clients/{}/{}/{}/observe'
-    # url.format(device_ip, device_port, endpoint_name, accessing, resource_code)
-    # requests.delete(url=url)
+def delete(device_ip, device_port, endpoint_name, accessing):
+    """This method deletes a specific resource"""
 
+    url = 'http://{}:{}/api/clients/{}/{}'
+    url.format(device_ip, device_port, endpoint_name, accessing)
+    requests.delete(url=url)
+
+# ---------------------------SOME AUX LOCAL METHODS-----------------------
+
+
+def read_and_execute_action_from_buffer(sh_semaphore, sh_buffer, device_data, kafka_producer):
+    acquired = sh_semaphore.acquire(blocking=False)  # we do not want the monitor to get blocked
+
+    if acquired:
+        message = sh_buffer.pop()
+        sh_semaphore.release()
+
+        if message['operation'] == 'OBSERVE':
+            accessing = message['resource_accessing']
+            observe(
+                device_data['ip'],
+                device_data['port'],
+                message['endpoint_name'],
+                accessing,
+                kafka_observe_topics[accessing]
+            )
+
+        elif message['operation'] == 'READ':
+            read(
+                device_data['ip'],
+                device_data['port'],
+                message['endpoint_name'],
+                message['resource_accessing'],
+                message['kafka_topic'],
+                kafka_producer
+            )
+
+        elif message['operation'] == 'WRITE':
+            write(
+                device_data['ip'],
+                device_data['port'],
+                message['endpoint_name'],
+                message['resource_accessing'],
+                message['data']
+            )
+
+        elif message['operation'] == 'EXECUTE':
+            execute(
+                device_data['ip'],
+                device_data['port'],
+                message['endpoint_name'],
+                message['resource_accessing']
+            )
+
+        elif message['operation'] == 'DELETE':
+            delete(
+                device_data['ip'],
+                device_data['port'],
+                message['endpoint_name'],
+                message['resource_accessing']
+            )
+
+        elif message['operation'] == 'DELETE_OBSERVATION':  # Modify later
+            delete_observation(
+                device_data['ip'],
+                device_data['port'],
+                message['endpoint_name'],
+                message['resource_accessing']
+            )
+        else:
+            raise Exception("Operation not valid.")

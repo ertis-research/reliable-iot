@@ -9,6 +9,29 @@ import json
 mongo_setup.global_init()  # makes connection with db
 
 
+def get_app(request, app_id):
+    """This method returns the app related to the id passed"""
+
+    if request.META.get('HTTP_AUTHORIZATION'):  # This checks if token is passed
+        token = request.META.get('HTTP_AUTHORIZATION').split(' ')[1]  # 'Token adsad' -> ['Token', 'adsad'] -> 'adsad'
+        # CHECK THE TOKEN
+        if core.validate(token):
+            app = Application.objects.with_id(app_id)
+
+            if app:
+                data = {'app': app.to_json()}
+                sts_code = HTTPStatus.OK
+            else:
+                sts_code = HTTPStatus.NOT_FOUND
+                data = {'Message': sts_code.name}
+            return http.JsonResponse(data=data, status=sts_code)
+        else:
+            return http.JsonResponse(data={'message': 'Token invalid or expired.'}, status=HTTPStatus.UNAUTHORIZED)
+    else:
+        return http.JsonResponse(data={'message': "Authentication credentials not provided"},
+                                 status=HTTPStatus.BAD_REQUEST)
+
+
 def get_all(request):
     """This method returns all Applications from the database"""
 
@@ -39,7 +62,6 @@ def store_or_update_app(request, name):
     {
         "interest" : "an interest"  # (not a list)
     }
-
     '''
 
     if request.META.get('HTTP_AUTHORIZATION'):
@@ -50,7 +72,6 @@ def store_or_update_app(request, name):
 
             if app.count():  # if any app fetched, we update it
                 app = app.first()
-
                 if 'interest' in data:
                     app.interests.append(data["interest"])
 
@@ -83,7 +104,7 @@ def store_or_update_app(request, name):
                                  status=HTTPStatus.BAD_REQUEST)
 
 
-def delete_app(request, name):
+def delete_app(request, app_id):
     '''
     This Method deletes a the shadow device related to the name given
     '''
@@ -91,11 +112,9 @@ def delete_app(request, name):
     if request.META.get('HTTP_AUTHORIZATION'):
         token = request.META.get('HTTP_AUTHORIZATION').split(' ')[1]
         if core.validate(token):
-            app = Application.objects(name=name)
+            app = Application.objects.with_id(app_id)
 
-            if app.count():
-                app = app.first()
-
+            if app:
                 usages = ResourceUse.objects(applications=app._id)
 
                 for usage in usages:

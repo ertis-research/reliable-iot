@@ -6,9 +6,7 @@ The message this Module will receive is a JSON-like message that the consumer wi
 {
     'endpoint_id': <id> (mandatory)
     'shadow_id': <id> (mandatory)
-
 }
-
 '''
 
 from kafka import KafkaProducer, KafkaConsumer
@@ -17,14 +15,14 @@ import requests
 import json
 
 
-kafka_producer = KafkaProducer(bootstrap_servers='127.0.0.1:9094',  # for local tests
-                               # bootstrap_servers='kafka:9094',  # for swarm
+kafka_producer = KafkaProducer(  # bootstrap_servers='127.0.0.1:9094',  # for local tests
+                               bootstrap_servers='kafka:9094',  # for swarm
                                client_id="iot_recovery_module",
                                value_serializer=lambda v: json.dumps(v).encode('utf-8'),
                                )
 
-kafka_consumer = KafkaConsumer(bootstrap_servers='127.0.0.1:9094',  # for local tests
-                               # bootstrap_servers='kafka:9094',  # for swarm
+kafka_consumer = KafkaConsumer(  # bootstrap_servers='127.0.0.1:9094',  # for local tests
+                               bootstrap_servers='kafka:9094',  # for swarm
                                auto_offset_reset='earliest',
                                value_deserializer=lambda m: json.loads(m.decode('utf-8'))
                                )
@@ -32,6 +30,38 @@ kafka_consumer = KafkaConsumer(bootstrap_servers='127.0.0.1:9094',  # for local 
 kafka_consumer.subscribe(['FailureTopic'])
 
 headers = {'Authorization': 'Token {}'.format(Token.get_instance())}
+
+
+def recovery(app_id, usage_id, shadow_id, resource_accessing, operation, app_old_topic):
+    # first we need to get the app data
+    url_app = URL.DB_URL+'getApp/{}/'.format(app_id)
+    resp_app = requests.get(url=url_app, headers=headers)
+    app_data = json.loads(resp_app.text)['app']
+
+    # For an used resource we tell the IoT Shadow Applications to search a similar logic or create a new one
+    url = 'http://iotshadowapplications:80/action/'
+    data = {
+        'app_name': app_data['name'],
+        'shadow_id': shadow_id,
+        'resource_accessing': resource_accessing,
+        'operation': operation
+    }
+    resp = requests.post(url=url, data=data, headers=headers)
+
+    if resp.status_code == 200:
+        new_kafka_topic_for_app = json.load(resp.text)['kafka_topic']
+
+        # We send the app the new kafka topic
+        kafka_producer.send(app_old_topic, {'new_kafka_topic': new_kafka_topic_for_app})
+
+    else:
+        # notify to the app through Kafka no more resource available.
+        kafka_producer.send(app_old_topic, {"NOTIFICATION": "No resource available!"})
+
+        # delete from the db the usage
+        url_delete = URL.DB_URL + 'deleteUsageResource/{}/'.format(usage_id)
+        requests.delete(url=url_delete, headers=headers)
+
 
 for message in kafka_consumer:
     json_object_message = message.value
@@ -47,13 +77,14 @@ for message in kafka_consumer:
         res_usage_list = json.loads(response.text)['usages']
 
         for res_usage in res_usage_list:
-            aux = json.loads(res_usage)  # serialize string to json object an store it into local var aux
-            res_id = aux["resource"]
+            aux_res_usage = json.loads(res_usage)  # serialize string to json object an store it into local var aux
+            applications = aux_res_usage['applications']  # list of app ids
 
-            # For every used resource we search a similar one
-                # 1 - if found we update in the db the fields shadow, iot_connector, endpoint, resource, kafkatopic
-                    # we send the new topic to the app
-
-                # 2 - if not found notify the app this type of resource is not available in the shadow
-                    # delete res usage from db
-
+            for application in applications:
+                recovery(application,
+                         aux_res_usage['_id'],
+                         aux_res_usage['shadow'],
+                         aux_res_usage['accessing'],
+                         aux_res_usage['operation'],
+                         aux_res_usage['kafka_topic']
+                         )

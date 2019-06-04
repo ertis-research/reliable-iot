@@ -1,4 +1,4 @@
-FROM python:3.6.7
+FROM python:3.4.10
 
 RUN mkdir -p /usr/src/IoT_Monitor
 

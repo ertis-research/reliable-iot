@@ -4,6 +4,7 @@ from my_db.db_mongo import mongo_setup
 from http import HTTPStatus
 from django import http
 import uuid
+import json
 
 mongo_setup.global_init()  # makes connection with db
 
@@ -22,7 +23,12 @@ def get_resource_use_by_epid_shdwid(request, ep_id, shdw_id):
             res_usages_list = []
 
             for res_usage in res_usages_fetched:
-                res_usages_list.append(res_usage.to_json())
+                # verify later
+                jsn = res_usage.to_json()
+                jsn = json.loads(jsn)
+                jsn['resource_code'] = res_usage.resource.type  # we add the resource code too bc we need it :D
+
+                res_usages_list.append(json.dumps(jsn))
 
             return http.JsonResponse(data={'usages': res_usages_list}, status=HTTPStatus.OK)
         else:
@@ -65,6 +71,7 @@ def create(request):
             'iot_connector': <connector_id>,
             'endpoint': <endpoint_id>,
             'resource': <resource_id>,
+            'accessing': <string>,
             'operation': <operation>,
             'kafka_topic': <kafka_topic>
         }
@@ -93,6 +100,7 @@ def create(request):
             new_usage.iot_connector = connector.to_dbref()
             new_usage.endpoint = ep.to_dbref()
             new_usage.resource = res.to_dbref()
+            new_usage.accessing = data['accessing']
             new_usage.kafka_topic = data['kafka_topic']
             new_usage.operation = data['operation']
             new_usage.save()
@@ -115,6 +123,7 @@ def update(request, obj_id):
         'iot_connector': <connector_id>,
         'endpoint': <endpoint_id>,
         'resource': <resource_id>,
+        'accessing': <string>,
         'kafka_topic': <kafka_topic>,
         'application': <app_name>
     }
@@ -170,6 +179,10 @@ def update(request, obj_id):
                     new_resource = Resource.objects.with_id(data['resource'])
                     new_resource.save()
                     usage.resource = new_resource.to_dbref()
+
+                if 'accessing' in data:
+                    if usage.accessing != data['accessing']:
+                        usage.accessing = data['accessing']
 
                 if 'kafka_topic' in data:  # we update always
                     usage.kafka_topic = data["kafka_topic"]

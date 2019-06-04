@@ -68,6 +68,7 @@ class ResourceUse(mongoengine.Document):
     iot_connector = mongoengine.ReferenceField(IotConnector, reverse_delete_rule=mongoengine.CASCADE, required=True)
     endpoint = mongoengine.ReferenceField(Endpoint, reverse_delete_rule=mongoengine.CASCADE, required=True)
     resource = mongoengine.ReferenceField(Resource, reverse_delete_rule=mongoengine.CASCADE, required=True)
+    accessing = mongoengine.StringField(required=True)
     operation = mongoengine.StringField(required=True)
     kafka_topic = mongoengine.StringField(required=True)
 

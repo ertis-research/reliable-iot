@@ -298,6 +298,7 @@ def search_res_in_shadow(shadow, res_type):
                             "success": True,
                             'id_iotconnector': device._id,
                             'id_endpoint': endpoint._id,
+                            'name_endpoint': endpoint.name,
                             'id_resource': resource._id
                         }
                     )
