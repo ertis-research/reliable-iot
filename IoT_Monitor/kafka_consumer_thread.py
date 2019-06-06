@@ -1,5 +1,16 @@
 from .shared_buffer import SharedBuffer
 import threading
+import json
+
+# for debugging purposes
+import logging
+from logging.handlers import SysLogHandler
+formatter = logging.Formatter('%(asctime)-15s %(name)-12s: %(levelname)-8s %(message)s')
+logger = logging.getLogger('my_logger')
+handler = SysLogHandler(address='/dev/log')
+handler.setFormatter(formatter)
+logger.addHandler(handler)
+logger.setLevel(logging.DEBUG)
 
 
 class KfkConsumer(threading.Thread):
@@ -22,7 +33,7 @@ class KfkConsumer(threading.Thread):
 
         for msg in self.kafka_consumer:
             sh_semaphore.acquire()
-
+            logger.debug("[Leshan Monitor]: Kafka message received: {}".format(json.dumps(msg)))
             sh_buffer.append(msg)  # message received buffered as it is (JSON object)
 
             sh_semaphore.release()

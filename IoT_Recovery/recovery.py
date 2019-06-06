@@ -10,9 +10,21 @@ The message this Module will receive is a JSON-like message that the consumer wi
 '''
 
 from kafka import KafkaProducer, KafkaConsumer
+from logging.handlers import SysLogHandler
 from .singletonClass import Token, URL
+
 import requests
+import logging
 import json
+
+
+# for debugging purposes
+formatter = logging.Formatter('%(asctime)-15s %(name)-12s: %(levelname)-8s %(message)s')
+logger = logging.getLogger('my_logger')
+handler = SysLogHandler(address='/dev/log')
+handler.setFormatter(formatter)
+logger.addHandler(handler)
+logger.setLevel(logging.DEBUG)
 
 
 kafka_producer = KafkaProducer(  # bootstrap_servers='127.0.0.1:9094',  # for local tests
@@ -23,7 +35,7 @@ kafka_producer = KafkaProducer(  # bootstrap_servers='127.0.0.1:9094',  # for lo
 
 kafka_consumer = KafkaConsumer(  # bootstrap_servers='127.0.0.1:9094',  # for local tests
                                bootstrap_servers='kafka:9094',  # for swarm
-                               auto_offset_reset='earliest',
+                               # auto_offset_reset='earliest',
                                value_deserializer=lambda m: json.loads(m.decode('utf-8'))
                                )
 
@@ -53,6 +65,7 @@ def recovery(app_id, usage_id, shadow_id, resource_accessing, operation, app_old
 
         # We send the app the new kafka topic
         kafka_producer.send(app_old_topic, {'new_kafka_topic': new_kafka_topic_for_app})
+        logger.debug("Recovery: Send the new topic to the app. ({})".format(new_kafka_topic_for_app))
 
     else:
         # notify to the app through Kafka no more resource available.
@@ -61,10 +74,12 @@ def recovery(app_id, usage_id, shadow_id, resource_accessing, operation, app_old
         # delete from the db the usage
         url_delete = URL.DB_URL + 'deleteUsageResource/{}/'.format(usage_id)
         requests.delete(url=url_delete, headers=headers)
+        logger.debug("[IOT_Recovery]: Desired Resource not available")
 
 
 for message in kafka_consumer:
     json_object_message = message.value
+    logger.debug("[IOT_Recovery]: Kafka message received: ".format(json.dumps(json_object_message)))
 
     # I get all used resources of the faulty endpoint
     request_url = URL.DB_URL+'getUsageByEpShadow/{}/{}/'.format(
@@ -74,6 +89,7 @@ for message in kafka_consumer:
     response = requests.get(url=request_url, headers=headers)
 
     if response.status_code == 200:
+        logger.debug("[IOT_Recovery]: Got all resource usages that failed.")
         res_usage_list = json.loads(response.text)['usages']
 
         for res_usage in res_usage_list:
@@ -81,6 +97,8 @@ for message in kafka_consumer:
             applications = aux_res_usage['applications']  # list of app ids using this resource
 
             for application in applications:
+                logger.debug("[IOT_Recovery]: Recovery for application {}".format(application))
+
                 recovery(application,
                          aux_res_usage['_id'],
                          aux_res_usage['shadow'],

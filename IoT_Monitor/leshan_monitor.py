@@ -8,6 +8,17 @@ import urllib3
 import json
 
 
+# for debugging purposes
+import logging
+from logging.handlers import SysLogHandler
+formatter = logging.Formatter('%(asctime)-15s %(name)-12s: %(levelname)-8s %(message)s')
+logger = logging.getLogger('my_logger')
+handler = SysLogHandler(address='/dev/log')
+handler.setFormatter(formatter)
+logger.addHandler(handler)
+logger.setLevel(logging.DEBUG)
+
+
 kafka_observe_topics = {}  # "/3303/0/5700": "topic_name"
 
 
@@ -108,6 +119,7 @@ def read(device_ip, device_port, endpoint_name, accessing, kafka_topic, kafka_pr
     If resource not found or Device not found either, it returns {success: False, message: messageError}
 
     '''
+    logger.debug("[Leshan Monitor]: Read operation requested")
 
     url = 'http://{}:{}/api/clients/{}/{}?format=JSON'
     url.format(device_ip, device_port, endpoint_name, accessing)
@@ -136,6 +148,7 @@ def write(device_ip, device_port, endpoint_name, accessing, data):
     Data format example: {'id': '0', 'resources': [{'id': "5700", 'value': "5"}]}
 
     '''
+    logger.debug("[Leshan Monitor]: Write operation requested")
 
     url = 'http://{}:{}/api/clients/{}/{}?format=JSON'
     url.format(device_ip, device_port, endpoint_name, accessing)
@@ -155,6 +168,7 @@ def execute(device_ip, device_port, endpoint_name, accessing):
     This method will make the operation EXECUTE of the desired resource and return its code status or error in case of fail.
     Resources route are like the following: accessing/code = /3303/0/5601 (accessing= /3303/0, code=5601)
     '''
+    logger.debug("[Leshan Monitor]: Execute operation requested")
 
     url = 'http://{}:{}/api/clients/{}/{}'
     url.format(device_ip, device_port, endpoint_name, accessing)
@@ -169,7 +183,7 @@ def execute(device_ip, device_port, endpoint_name, accessing):
 
 def observe(device_ip, device_port, endpoint_name, accessing, kafka_topic):
     '''Given the following Resource data, this method starts the observation of its value'''
-
+    logger.debug("[Leshan Monitor]: Observe operation requested")
     kafka_observe_topics[accessing] = kafka_topic
 
     url = 'http://{}:{}/api/clients/{}/{}/observe?format=JSON'
@@ -179,7 +193,7 @@ def observe(device_ip, device_port, endpoint_name, accessing, kafka_topic):
 
 def delete_observation(device_ip, device_port, endpoint_name, accessing):
     """This method stops an observation when it's required"""
-
+    logger.debug("[Leshan Monitor]: Delete Observation operation requested")
     url = 'http://{}:{}/api/clients/{}/{}/observe'
     url.format(device_ip, device_port, endpoint_name, accessing)
     requests.delete(url=url)
@@ -187,7 +201,7 @@ def delete_observation(device_ip, device_port, endpoint_name, accessing):
 
 def delete(device_ip, device_port, endpoint_name, accessing):
     """This method deletes a specific resource"""
-
+    logger.debug("[Leshan Monitor]: Delete operation requested")
     url = 'http://{}:{}/api/clients/{}/{}'
     url.format(device_ip, device_port, endpoint_name, accessing)
     requests.delete(url=url)
@@ -197,7 +211,7 @@ def delete(device_ip, device_port, endpoint_name, accessing):
 
 def read_and_execute_action_from_buffer(sh_semaphore, sh_buffer, device_data, kafka_producer):
     acquired = sh_semaphore.acquire(blocking=False)  # we do not want the monitor to get blocked
-
+    logger.debug("[Leshan Monitor]: Reading operation from buffer.")
     if acquired:
         message = sh_buffer.pop()
         sh_semaphore.release()
