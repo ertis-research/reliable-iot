@@ -56,9 +56,9 @@ def get_leshan_resources_data(resources_list):
         resource = {}
         resource['accessing'] = y['url']
 
-        type = y['url'].split('/')[1]  # "/" => ['','']  #  "/1/0" => ['', '1', '0']
-        if type != '':
-            resource['type'] = type
+        typee = y['url'].split('/')[1]  # "/" => ['','']  #  "/1/0" => ['', '1', '0']
+        if typee != '':
+            resource['type'] = typee
             return_data.append(resource)
 
     return return_data
@@ -179,9 +179,7 @@ def store_endpoints_and_resources(endpoint_list, device_id, token):
             endpoint_resources_ids.append(res_id)
 
         # we update here the endpoint resource's list
-        requests.post(url=url_update_endpoint.format(register_data['registrationId']),  # endpoints are updated by their leshan id
-                      data={'resources': json.dumps(endpoint_resources_ids)},
-                      headers=headers)
+        update_endpoint(ep_id, {'resources': json.dumps(endpoint_resources_ids)}, token)
 
     # we update the device's id list
     requests.post(url=url_update_device,

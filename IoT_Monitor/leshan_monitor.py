@@ -26,15 +26,15 @@ def get_data_stream(token, api_endpoint, device_data, shadow_device_id):
     """ Start REST streaming device events given a Nest token.  """
 
     kafka_producer = KafkaProducer(bootstrap_servers='kafka:9094',
-                                   client_id=device_data['_id'],
-                                   value_serializer=lambda v: json.dumps(v).encode('utf-8'),
-                                   )
+                                   # client_id=device_data['_id'],
+                                   value_serializer=lambda v: json.dumps(v).encode('utf-8'))
 
     kafka_consumer = KafkaConsumer(bootstrap_servers='kafka:9094',
                                    value_deserializer=lambda m: json.loads(m.decode('utf-8'))
                                    )
 
     # we start a thread that constantly reads from kafka
+    kafka_consumer.subscribe([device_data['_id']])
     t = KfkConsumer(consumer=kafka_consumer)
     t.start()
 
@@ -79,6 +79,7 @@ def get_data_stream(token, api_endpoint, device_data, shadow_device_id):
 
         # Event check
         if event_type == 'UPDATED':  # updates periodically incoming
+            kafka_producer.send("PENE", {"EVENTO": "UPDATE"})
             data_to_store = aux_functions.purge_update_data(event.data)
             data = {'event': json.dumps(data_to_store)}  # event data as JSON
             endpoint_id = aux_functions.get_endpoint_id(data_to_store['registrationId'], token)
@@ -86,10 +87,36 @@ def get_data_stream(token, api_endpoint, device_data, shadow_device_id):
             aux_functions.update_endpoint(endpoint_id, data, token)
 
         elif event_type == 'REGISTRATION':
+            kafka_producer.send("PENE", {"EVENTO": "REGISTRATION"})
+            """
+            event:  REGISTRATION
+            {"endpoint":"c5","registrationId":"0hb0nPEAMz",
+            "registrationDate":"2019-06-07T10:16:48Z","lastUpdate":"2019-06-07T10:16:48Z",
+            "address":"10.255.0.2:42165","lwM2mVersion":"1.0","lifetime":30,"bindingMode":"U",
+            "rootPath":"/",
+            "objectLinks":[{"url":"/","attributes":{"rt":"oma.lwm2m"}},
+                            {"url":"/1/0","attributes":{}},{"url":"/3/0","attributes":{}},
+                            {"url":"/6/0","attributes":{}},
+                            {"url":"/3303/0","attributes":{}}],
+            "secure":false,
+            "additionalRegistrationAttributes":{}}
+            
+            """
             endpoint = json.loads(event.data)
-            aux_functions.store_endpoints_and_resources(endpoint, device_data['_id'], token)
+            aux_functions.store_endpoints_and_resources([endpoint], device_data['_id'], token)
 
         elif event_type == 'DEREGISTRATION':  # we do not delete the data, we set status to 0, which means, unavailable
+            kafka_producer.send("PENE", {"EVENTO": "DEREGISTRATION"})
+            """
+            {"endpoint":"abc","registrationId":"yT9iROs5NR",
+            "registrationDate":"2019-06-07T10:53:16Z","lastUpdate":"2019-06-07T10:53:16Z",
+            "address":"10.255.0.2:56554","lwM2mVersion":"1.0","lifetime":30,"bindingMode":"U","rootPath":"/",
+            "objectLinks":[{"url":"/","attributes":{"rt":"oma.lwm2m"}},{"url":"/1/0","attributes":{}},
+                            {"url":"/3/0","attributes":{}},{"url":"/6/0","attributes":{}},
+                            {"url":"/3303/0","attributes":{}}],
+            "secure":false,
+            "additionalRegistrationAttributes":{}}
+            """
             endpoint = json.loads(event.data)
             endpoint_id = aux_functions.get_endpoint_id(endpoint['registrationId'], token)
             aux_functions.update_endpoint(endpoint_id, {'status': 0}, token)
@@ -99,11 +126,11 @@ def get_data_stream(token, api_endpoint, device_data, shadow_device_id):
                 'connector_id': device_data['_id'],
                 'endpoint_id': endpoint_id
             }
-
             # inform to recovery shadow when a device has fallen down at topic FailureTopic
             kafka_producer.send('FailureTopic', failure_data_recovery)
 
-        elif event_type == 'NOTIFICATION':  # Working on it
+        elif event_type == 'NOTIFICATION':
+            kafka_producer.send("PENE", {"EVENTO": "NOTIFICATION"})
             # data_observed e.g. = {"ep": "C1", "res": "/3303/0/5700", "val": {"id": 5700, "value": 18.1}}
             data_observed = json.loads(event.data)
 

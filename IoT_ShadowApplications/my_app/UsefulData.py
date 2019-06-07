@@ -6,8 +6,8 @@ import json
 
 
 class URL:
-    DB_URL = 'http://127.0.0.1:8080/'  # on local for tests
-    # DB_URL = 'http://mongoapi:80/'  # on docker swarm
+    # DB_URL = 'http://127.0.0.1:8080/'  # on local for tests
+    DB_URL = 'http://mongoapi:80/'  # on docker swarm
 
 
 class Token:

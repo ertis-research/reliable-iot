@@ -80,18 +80,22 @@ def dev_resources(request, dev_id):
         req = requests.get(url=url, headers=headers)
 
         if req.status_code == 200:
-            resources_list = json.loads(req.text)['resources']
-            context = {'resources': [], 'email': user.user_email, 'device_id': dev_id}
-            if resources_list:
-                for resource in resources_list:
-                    json_object = json.loads(resource)
-                    json_object['id'] = json_object['_id']
+            resources = json.loads(req.text)
+            context = {'resources': {}, 'email': user.user_email, 'device_id': dev_id}
+            if resources:
+                for ep, resources_list in resources.items():
+                    for res in resources_list:
+                        json_object = json.loads(res)
+                        json_object['id'] = json_object['_id']
 
-                    url_status = UM.DB_URL + 'getResourceStatus/{}/'.format(json_object['_id'])
-                    req_status = requests.get(url=url_status, headers=headers)
-                    json_object['STATUS'] = json.loads(req_status.text)['status']
+                        url_status = UM.DB_URL + 'getResourceStatus/{}/'.format(json_object['_id'])
+                        req_status = requests.get(url=url_status, headers=headers)
+                        json_object['STATUS'] = json.loads(req_status.text)['status']
 
-                    context['resources'].append(json_object)
+                        if ep in context['resources']:
+                            context["resources"][ep].append(json_object)
+                        else:
+                            context["resources"][ep] = [json_object]
 
             return HttpResponse(template.render(context, request))
         else:

@@ -11,8 +11,7 @@ The message this Module will receive is a JSON-like message that the consumer wi
 
 from kafka import KafkaProducer, KafkaConsumer
 from logging.handlers import SysLogHandler
-from .singletonClass import Token, URL
-
+from singletonClass import Token, URL
 import requests
 import logging
 import json
@@ -27,13 +26,13 @@ logger.addHandler(handler)
 logger.setLevel(logging.DEBUG)
 
 
-kafka_producer = KafkaProducer(  # bootstrap_servers='127.0.0.1:9094',  # for local tests
+kafka_producer = KafkaProducer(#bootstrap_servers='127.0.0.1:9094',  # for local tests
                                bootstrap_servers='kafka:9094',  # for swarm
                                client_id="iot_recovery_module",
                                value_serializer=lambda v: json.dumps(v).encode('utf-8'),
                                )
 
-kafka_consumer = KafkaConsumer(  # bootstrap_servers='127.0.0.1:9094',  # for local tests
+kafka_consumer = KafkaConsumer(#bootstrap_servers='127.0.0.1:9094',  # for local tests
                                bootstrap_servers='kafka:9094',  # for swarm
                                # auto_offset_reset='earliest',
                                value_deserializer=lambda m: json.loads(m.decode('utf-8'))

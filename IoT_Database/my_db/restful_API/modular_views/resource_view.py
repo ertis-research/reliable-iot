@@ -102,7 +102,7 @@ def store_resource(request):
             try:
                 new_resource.save()
                 status_to_return = HTTPStatus.OK
-                data = {'resource_id': new_resource.pk}
+                data = {'resource_id': new_resource._id}
             except:  # Data-Wrong or Connection Failed
                 return http.JsonResponse({'message': 'Wrong data format'}, status=HTTPStatus.BAD_REQUEST)
 
@@ -245,26 +245,27 @@ def get_shadow_resources(request, shdw_id):
 
 def get_device_resources(request, dev_id):
     '''
-    Given a device id, this method fetches the token from the db and returns it.
+    Given a device id, this method fetches all its resources and returns them.
     :param request: HttpRequest
     :param dev_id: String
-    :return: tokens: Json
+    :return:
     '''
     if request.META.get('HTTP_AUTHORIZATION'):
         token = request.META.get('HTTP_AUTHORIZATION').split(' ')[1]
         if core.validate(token):
             device = IotConnector.objects.with_id(dev_id)
-            res_list = []
+            res_dict = {}
 
             if device:
                 dev_endpoints = device.endpoints
 
                 for endpoint in dev_endpoints:  # iterator over endpoints
                     resources = endpoint.resources
+                    res_dict[endpoint.name] = []
                     for res in resources:  # iterator over resources
-                        res_list.append(res.to_json())
+                        res_dict[endpoint.name].append(res.to_json())
 
-            return http.JsonResponse(data={'resources': res_list}, status=HTTPStatus.OK)
+            return http.JsonResponse(data=res_dict, status=HTTPStatus.OK)
         else:
             return http.JsonResponse(data={'message': 'Token invalid or expired.'},
                                      status=HTTPStatus.UNAUTHORIZED)

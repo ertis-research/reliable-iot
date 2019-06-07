@@ -1,4 +1,4 @@
-from .shared_buffer import SharedBuffer
+from shared_buffer import SharedBuffer
 import threading
 import json
 

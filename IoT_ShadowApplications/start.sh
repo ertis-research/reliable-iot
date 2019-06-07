@@ -1,3 +1,2 @@
 #!/usr/bin/env bash
-python main.py
-
+python manage.py runserver 0:80

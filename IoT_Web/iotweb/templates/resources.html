@@ -48,34 +48,39 @@
                 <table class="table">
                     <thead>
                         <th>Resource</th>
+                        <th>Endpoint</th>
+                        <th>Status</th>
                     </thead>
                     <tbody>
-                    {% for resource in resources %}
-                    <tr>
-                        <td>/{{ resource.type }}</td>
-                        <td align="left">
-                            {% if resource.STATUS == 'USING'%}
-                                <span class='dot' style="background-color: #FFA500;"></span>
-                            {% endif %}
+                    {% for ep, resources_list in resources.items %}
+                        {% for resource in resources_list %}
+                            <tr>
+                                <td>/{{ resource.type }}</td>
+                                <td>{{ ep }}</td>
+                                <td align="left">
+                                    {% if resource.STATUS == 'USING'%}
+                                        <span class='dot' style="background-color: #FFA500;"></span>
+                                    {% endif %}
 
-                            {% if resource.STATUS == 'NOT_USING'%}
-                                <span class='dot' style="background-color: #33FE01;"></span>
-                            {% endif %}
+                                    {% if resource.STATUS == 'NOT_USING'%}
+                                        <span class='dot' style="background-color: #33FE01;"></span>
+                                    {% endif %}
 
-                            {% if resource.STATUS == 'DOWN'%}
-                                <span class='dot' style="background-color: #FF0000;"></span>
-                            {% endif %}
-                        </td>
-                        <td>
-                            <form method="post">
-                                <input type="hidden" id="resource" name="resource_id" value="{{resource.id}}">
-                                <button class="btn btn-danger" type="submit" value="submit" onclick="return confirm('Are you sure?')">
-                                    Delete
-                                    <span style="margin-left: 5px;" class="glyphicon glyphicon-trash" aria-hidden="true"></span>
-                                </button>
-                            </form>
-                        </td>
-                    </tr>
+                                    {% if resource.STATUS == 'DOWN'%}
+                                        <span class='dot' style="background-color: #FF0000;"></span>
+                                    {% endif %}
+                                </td>
+                                <td align="right">
+                                    <form method="post">
+                                        <input type="hidden" id="resource" name="resource_id" value="{{resource.id}}">
+                                        <button class="btn btn-danger" type="submit" value="submit" onclick="return confirm('Are you sure?')">
+                                            Delete
+                                            <span style="margin-left: 5px;" class="glyphicon glyphicon-trash" aria-hidden="true"></span>
+                                        </button>
+                                    </form>
+                                </td>
+                            </tr>
+                        {% endfor %}
                     {% endfor %}
                     </tbody>
                 </table>

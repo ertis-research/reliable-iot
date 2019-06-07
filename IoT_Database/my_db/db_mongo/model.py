@@ -41,8 +41,8 @@ class Shadow(mongoengine.Document):
     _id = mongoengine.StringField(required=True, primary_key=True)
     tokens = mongoengine.ListField(mongoengine.ReferenceField(Token), default=[])
     devices = mongoengine.ListField(mongoengine.ReferenceField(IotConnector), default=[])
-    name = mongoengine.StringField()
-    description = mongoengine.StringField()
+    name = mongoengine.StringField(required=True)
+    description = mongoengine.StringField(required=True)
 
 
 class UserData(mongoengine.Document):
