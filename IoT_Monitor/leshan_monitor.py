@@ -79,7 +79,8 @@ def get_data_stream(token, api_endpoint, device_data, shadow_device_id):
 
         # Event check
         if event_type == 'UPDATED':  # updates periodically incoming
-            kafka_producer.send("PENE", {"EVENTO": "UPDATE"})
+            kafka_producer.send("PRUEBA", {"EVENTO": "UPDATE"})
+
             data_to_store = aux_functions.purge_update_data(event.data)
             data = {'event': json.dumps(data_to_store)}  # event data as JSON
             endpoint_id = aux_functions.get_endpoint_id(data_to_store['registrationId'], token)
@@ -87,7 +88,7 @@ def get_data_stream(token, api_endpoint, device_data, shadow_device_id):
             aux_functions.update_endpoint(endpoint_id, data, token)
 
         elif event_type == 'REGISTRATION':
-            kafka_producer.send("PENE", {"EVENTO": "REGISTRATION"})
+            kafka_producer.send("PRUEBA", {"EVENTO": "REGISTRATION"})
             """
             event:  REGISTRATION
             {"endpoint":"c5","registrationId":"0hb0nPEAMz",
@@ -106,7 +107,7 @@ def get_data_stream(token, api_endpoint, device_data, shadow_device_id):
             aux_functions.store_endpoints_and_resources([endpoint], device_data['_id'], token)
 
         elif event_type == 'DEREGISTRATION':  # we do not delete the data, we set status to 0, which means, unavailable
-            kafka_producer.send("PENE", {"EVENTO": "DEREGISTRATION"})
+            kafka_producer.send("PRUEBA", {"EVENTO": "DEREGISTRATION"})
             """
             {"endpoint":"abc","registrationId":"yT9iROs5NR",
             "registrationDate":"2019-06-07T10:53:16Z","lastUpdate":"2019-06-07T10:53:16Z",
@@ -130,7 +131,7 @@ def get_data_stream(token, api_endpoint, device_data, shadow_device_id):
             kafka_producer.send('FailureTopic', failure_data_recovery)
 
         elif event_type == 'NOTIFICATION':
-            kafka_producer.send("PENE", {"EVENTO": "NOTIFICATION"})
+            kafka_producer.send("PRUEBA", {"EVENTO": "NOTIFICATION"})
             # data_observed e.g. = {"ep": "C1", "res": "/3303/0/5700", "val": {"id": 5700, "value": 18.1}}
             data_observed = json.loads(event.data)
 
@@ -165,6 +166,7 @@ def read(device_ip, device_port, endpoint_name, accessing, kafka_topic, kafka_pr
         data_to_send = {'success': False}
 
     kafka_producer.send(kafka_topic, data_to_send)
+    kafka_producer.flush()
 
 
 def write(device_ip, device_port, endpoint_name, accessing, data):
