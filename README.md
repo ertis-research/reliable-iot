@@ -13,9 +13,8 @@ on a cloud-fog architecture.
 Notes:
 - When deploying all modules to Docker Swarm, use de following command: 
 ```
-docker stack deploy -c docker-compose-all.yml IOT
+docker stack deploy -c docker-compose-all.yml reliableiot
 ```
-(The name **IOT** it's important because the **IoT_Register** module will try to deploy dynamically a new Docker container to the network **IOT_default**.)
 
 Before deploying all modules on Swarm, the following Docker images must be built: *iotdatabase, iotregister, iotweb, iotshadowapplications, leshanondockers, leshanmonitor, iotrecovery.* The other images: *mongo, zookeeper, kafka*, are directly pulled from Docker hub.
 
@@ -133,37 +132,65 @@ services:
       - 2181:2181
     environment:
       ZOO_MY_ID: 1
-#      ZOO_SERVERS: server.1=0.0.0.0:2888:3888 server.2=zookeeper2:2888:3888
+      ZOO_SERVERS: server.1=0.0.0.0:2888:3888;2181 server.2=zookeeper2:2888:3888;2181
 
-#  zookeeper2:
-#    image: zookeeper:latest
-#    restart: always
-#    ports:
-#      - 2182:2181
-#   environment:
-#      ZOO_MY_ID: 2
-#      ZOO_SERVERS: server.1=zookeeper1:2888:3888 server.2=0.0.0.0:2888:3888
+  zookeeper2:
+    image: zookeeper:latest
+    restart: always
+    ports:
+      - 2182:2181
+    environment:
+      ZOO_MY_ID: 2
+      ZOO_SERVERS: server.1=zookeeper1:2888:3888;2181 server.2=0.0.0.0:2888:3888;2181
 
-  kafka:
-    image: wurstmeister/kafka:latest
+   
+  kafka1:
+    image: wurstmeister/kafka:2.12-2.2.1
     ports:
       - target: 9094
         published: 9094
         protocol: tcp
         mode: host
-
-
     environment:
-      HOSTNAME_COMMAND: "docker info | grep ^Name: | cut -d' ' -f 2"
-      KAFKA_ZOOKEEPER_CONNECT: zookeeper1:2181
+      HOSTNAME_COMMAND: "hostname"
+      KAFKA_ZOOKEEPER_CONNECT: zookeeper1:2181, zookeeper2:2181
       KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: INSIDE:PLAINTEXT,OUTSIDE:PLAINTEXT
-      KAFKA_ADVERTISED_LISTENERS: INSIDE://:9092,OUTSIDE://_{HOSTNAME_COMMAND}:9094
+      KAFKA_ADVERTISED_LISTENERS: INSIDE://:9092,OUTSIDE://localhost:9094
       KAFKA_LISTENERS: INSIDE://:9092,OUTSIDE://:9094
-      KAFKA_AUTO_CREATE_TOPICS_ENABLE: 'true'
-# KAFKA_AUTO_CREATE_TOPICS_ENABLE is true by default
       KAFKA_INTER_BROKER_LISTENER_NAME: INSIDE
-      KAFKA_CREATE_TOPICS: "FailureTopic:1:1"
+      KAFKA_BROKER_ID: 1
+      KAFKA_ZOOKEEPER_CONNECTION_TIMEOUT_MS: 36000
+      KAFKA_LOG_RETENTION_BYTES: -1
+      KAFKA_LOG_RETENTION_DAYS: 2
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock
+    depends_on:
+      - zookeeper1
+      - zookeeper2
+
+  kafka2:
+    image: wurstmeister/kafka:2.12-2.2.1
+    ports:
+      - target: 9095
+        published: 9095
+        protocol: tcp
+        mode: host
+    environment:
+      HOSTNAME_COMMAND: "hostname"
+      KAFKA_ZOOKEEPER_CONNECT: zookeeper1:2181, zookeeper2:2181
+      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: INSIDE:PLAINTEXT,OUTSIDE:PLAINTEXT
+      KAFKA_ADVERTISED_LISTENERS: INSIDE://:9092,OUTSIDE://localhost:9095
+      KAFKA_LISTENERS: INSIDE://:9092,OUTSIDE://:9095
+      KAFKA_INTER_BROKER_LISTENER_NAME: INSIDE
+      KAFKA_BROKER_ID: 2
+      KAFKA_ZOOKEEPER_CONNECTION_TIMEOUT_MS: 36000
+      KAFKA_LOG_RETENTION_BYTES: -1
+      KAFKA_LOG_RETENTION_DAYS: 2
+      KAFKA_CREATE_TOPICS: "failure:2:2"
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+    depends_on:
+      - zookeeper1
+      - zookeeper2
 
 ```
