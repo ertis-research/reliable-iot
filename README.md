@@ -66,11 +66,11 @@ services:
       replicas: 3
     ports:
       - "8001:80"
-    volumes: # logging for debuging purposes
+    volumes: 
       - type: bind
         source: /var/run/docker.sock
         target: /var/run/docker.sock
-
+        
 #----------------------------------------
   iotweb:
     image: iotweb:latest
@@ -90,10 +90,6 @@ services:
           condition: on-failure
     ports:
       - "8003:80"
-    volumes: # logging for debuging purposes
-      - type: bind
-        source: /dev/log
-        target: /dev/log
 
 #---------------------------------------
   iotrecovery:
@@ -104,10 +100,7 @@ services:
           condition: on-failure
     ports:
       - "8004:80"
-    volumes: # logging for debuging purposes
-      - type: bind
-        source: /dev/log
-        target: /dev/log
+
 
 #--------------------LESHAN-SERVER-CLIENT------------------
   leshan:
@@ -164,9 +157,6 @@ services:
       KAFKA_LOG_RETENTION_DAYS: 2
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock
-    depends_on:
-      - zookeeper1
-      - zookeeper2
 
   kafka2:
     image: wurstmeister/kafka:2.12-2.2.1
@@ -186,11 +176,7 @@ services:
       KAFKA_ZOOKEEPER_CONNECTION_TIMEOUT_MS: 36000
       KAFKA_LOG_RETENTION_BYTES: -1
       KAFKA_LOG_RETENTION_DAYS: 2
-      KAFKA_CREATE_TOPICS: "failure:2:2"
+      KAFKA_CREATE_TOPICS: "FailureTopic:2:2"
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock
-    depends_on:
-      - zookeeper1
-      - zookeeper2
-
 ```
