@@ -300,7 +300,8 @@ def search_res_in_shadow(shadow, res_type):
                             'id_iotconnector': device._id,
                             'id_endpoint': endpoint._id,
                             'name_endpoint': endpoint.name,
-                            'id_resource': resource._id
+                            'id_resource': resource._id,
+                            'shadow_id': shadow._id
                         }
                     )
                     code_to_return = HTTPStatus.OK

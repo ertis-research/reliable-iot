@@ -27,13 +27,13 @@ logger.setLevel(logging.DEBUG)
 
 
 kafka_producer = KafkaProducer(#bootstrap_servers='127.0.0.1:9094',  # for local tests
-                               bootstrap_servers='kafka:9094',  # for swarm
+                               bootstrap_servers=['kafka1:9092', 'kafka2:9092'],
                                client_id="iot_recovery_module",
                                value_serializer=lambda v: json.dumps(v).encode('utf-8'),
                                )
 
 kafka_consumer = KafkaConsumer(#bootstrap_servers='127.0.0.1:9094',  # for local tests
-                               bootstrap_servers='kafka:9094',  # for swarm
+                               bootstrap_servers=['kafka1:9092', 'kafka2:9092'],
                                # auto_offset_reset='earliest',
                                value_deserializer=lambda m: json.loads(m.decode('utf-8'))
                                )
@@ -62,6 +62,8 @@ def recovery(app_id, usage_id, shadow_id, resource_accessing, operation, app_old
     if resp.status_code == 200:
         new_kafka_topic_for_app = json.load(resp.text)['kafka_topic']
 
+        kafka_producer.send("LogTopic", {"[Iot Recovery]": "Sending new topic to app."})
+
         # We send the app the new kafka topic
         kafka_producer.send(app_old_topic, {'new_kafka_topic': new_kafka_topic_for_app})
         logger.debug("Recovery: Send the new topic to the app. ({})".format(new_kafka_topic_for_app))
@@ -73,12 +75,13 @@ def recovery(app_id, usage_id, shadow_id, resource_accessing, operation, app_old
         # delete from the db the usage
         url_delete = URL.DB_URL + 'deleteUsageResource/{}/'.format(usage_id)
         requests.delete(url=url_delete, headers=headers)
-        logger.debug("[IOT_Recovery]: Desired Resource not available")
+
+        kafka_producer.send("LogTopic", {"[Iot Recovery]": "Resource not available."})
 
 
 for message in kafka_consumer:
     json_object_message = message.value
-    logger.debug("[IOT_Recovery]: Kafka message received: ".format(json.dumps(json_object_message)))
+    kafka_producer.send("LogTopic",  {"[Iot Recovery]": "Message received."})
 
     # I get all used resources of the faulty endpoint
     request_url = URL.DB_URL+'getUsageByEpShadow/{}/{}/'.format(
@@ -88,7 +91,7 @@ for message in kafka_consumer:
     response = requests.get(url=request_url, headers=headers)
 
     if response.status_code == 200:
-        logger.debug("[IOT_Recovery]: Got all resource usages that failed.")
+        kafka_producer.send("LogTopic", {"[Iot Recovery]": "Got all resources that failed."})
         res_usage_list = json.loads(response.text)['usages']
 
         for res_usage in res_usage_list:
@@ -96,7 +99,7 @@ for message in kafka_consumer:
             applications = aux_res_usage['applications']  # list of app ids using this resource
 
             for application in applications:
-                logger.debug("[IOT_Recovery]: Recovery for application {}".format(application))
+                kafka_producer.send("LogTopic", "Recovery for application {}".format(application))
 
                 recovery(application,
                          aux_res_usage['_id'],
@@ -105,3 +108,5 @@ for message in kafka_consumer:
                          aux_res_usage['operation'],
                          aux_res_usage['kafka_topic']
                          )
+    else:
+        kafka_producer.send("LogTopic", {"[Iot Recovery]": "No apps using the faulty resources. No need to recovery"})

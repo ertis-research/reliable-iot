@@ -55,10 +55,10 @@ def register(request):
                         # it returns the created service
                         # in case of fail Raises: docker.errors.APIError
                         service = docker_client.services.create(image=image, env=docker_environment_variables,
-                                                                networks=networks, mounts=['/dev/log:/dev/log:rw'])
-                    except:
+                                                                networks=networks)
+                    except Exception as e:
                         service = None
-                        message = 'Failed to deploy dinamically.'
+                        message = 'Failed to deploy dinamically: '+str(e)
 
                 else:
                     service = None

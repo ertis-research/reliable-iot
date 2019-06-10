@@ -67,7 +67,8 @@ urlpatterns = [
 
     # THESE ROUTES ARE FOR RESOURCE USAGE
     path('getUsageByEpShadow/<str:ep_id>/<str:shdw_id>/', app_resource_usage.get_resource_use_by_epid_shdwid),
-    path('getCreatedLogic/<str:shdw_id>/<str:res_code>/<str:operation>/', app_resource_usage.get_similar_logic),
+    path('getCreatedLogic/<str:res_code>/<str:operation>/<str:shdw_id>/', app_resource_usage.get_similar_logic),
+    path('getCreatedLogic/<str:res_code>/<str:operation>/', app_resource_usage.get_similar_logic),
     path('createUsageResource/', app_resource_usage.create),
     path('deleteUsageResource/<str:usage_id>/', app_resource_usage.delete),
     path('updateUsageResource/<str:usage_id>/', app_resource_usage.update),

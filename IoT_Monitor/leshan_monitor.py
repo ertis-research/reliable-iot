@@ -8,36 +8,25 @@ import urllib3
 import json
 
 
-# for debugging purposes
-import logging
-from logging.handlers import SysLogHandler
-formatter = logging.Formatter('%(asctime)-15s %(name)-12s: %(levelname)-8s %(message)s')
-logger = logging.getLogger('my_logger')
-handler = SysLogHandler(address='/dev/log')
-handler.setFormatter(formatter)
-logger.addHandler(handler)
-logger.setLevel(logging.DEBUG)
-
-
 kafka_observe_topics = {}  # "/3303/0/5700": "topic_name"
 
 
 def get_data_stream(token, api_endpoint, device_data, shadow_device_id):
     """ Start REST streaming device events given a Nest token.  """
 
-    kafka_producer = KafkaProducer(bootstrap_servers='kafka:9094',
-                                   # client_id=device_data['_id'],
-                                   value_serializer=lambda v: json.dumps(v).encode('utf-8'))
+    kafka_producer = KafkaProducer(bootstrap_servers=['kafka1:9092', 'kafka2:9092'],
+                                   client_id=device_data['_id'],
+                                   value_serializer=lambda v: json.dumps(v).encode('utf-8')
+                                   )
 
-    kafka_consumer = KafkaConsumer(bootstrap_servers='kafka:9094',
+    kafka_consumer = KafkaConsumer(bootstrap_servers=['kafka1:9092', 'kafka2:9092'],
                                    value_deserializer=lambda m: json.loads(m.decode('utf-8'))
                                    )
 
     # we start a thread that constantly reads from kafka
     kafka_consumer.subscribe([device_data['_id']])
-    t = KfkConsumer(consumer=kafka_consumer)
+    t = KfkConsumer(consumer=kafka_consumer, producer=kafka_producer)
     t.start()
-
     # t.join()
 
     headers = {
@@ -72,14 +61,16 @@ def get_data_stream(token, api_endpoint, device_data, shadow_device_id):
 
         # Message check
         try:
+            kafka_producer.send("LogTopic", {"[Leshan Monitor]": "checking shared buffer."})
             read_and_execute_action_from_buffer(sh_semaphore, sh_buffer, device_data, kafka_producer)
+
         except IndexError:
             # it means there's no message in the buffer
             sh_semaphore.release()
+            kafka_producer.send("LogTopic", {"[Leshan Monitor]": "Empty shared buffer."})
 
         # Event check
         if event_type == 'UPDATED':  # updates periodically incoming
-            kafka_producer.send("PRUEBA", {"EVENTO": "UPDATE"})
 
             data_to_store = aux_functions.purge_update_data(event.data)
             data = {'event': json.dumps(data_to_store)}  # event data as JSON
@@ -88,7 +79,6 @@ def get_data_stream(token, api_endpoint, device_data, shadow_device_id):
             aux_functions.update_endpoint(endpoint_id, data, token)
 
         elif event_type == 'REGISTRATION':
-            kafka_producer.send("PRUEBA", {"EVENTO": "REGISTRATION"})
             """
             event:  REGISTRATION
             {"endpoint":"c5","registrationId":"0hb0nPEAMz",
@@ -103,11 +93,12 @@ def get_data_stream(token, api_endpoint, device_data, shadow_device_id):
             "additionalRegistrationAttributes":{}}
             
             """
+            kafka_producer.send("LogTopic", {"[Leshan Monitor]": "Registration event."})
             endpoint = json.loads(event.data)
             aux_functions.store_endpoints_and_resources([endpoint], device_data['_id'], token)
 
         elif event_type == 'DEREGISTRATION':  # we do not delete the data, we set status to 0, which means, unavailable
-            kafka_producer.send("PRUEBA", {"EVENTO": "DEREGISTRATION"})
+
             """
             {"endpoint":"abc","registrationId":"yT9iROs5NR",
             "registrationDate":"2019-06-07T10:53:16Z","lastUpdate":"2019-06-07T10:53:16Z",
@@ -118,6 +109,8 @@ def get_data_stream(token, api_endpoint, device_data, shadow_device_id):
             "secure":false,
             "additionalRegistrationAttributes":{}}
             """
+            kafka_producer.send("LogTopic", {"[Leshan Monitor]": "Deregistration event."})
+
             endpoint = json.loads(event.data)
             endpoint_id = aux_functions.get_endpoint_id(endpoint['registrationId'], token)
             aux_functions.update_endpoint(endpoint_id, {'status': 0}, token)
@@ -131,12 +124,23 @@ def get_data_stream(token, api_endpoint, device_data, shadow_device_id):
             kafka_producer.send('FailureTopic', failure_data_recovery)
 
         elif event_type == 'NOTIFICATION':
-            kafka_producer.send("PRUEBA", {"EVENTO": "NOTIFICATION"})
             # data_observed e.g. = {"ep": "C1", "res": "/3303/0/5700", "val": {"id": 5700, "value": 18.1}}
+            kafka_producer.send("LogTopic",  {"[Leshan Monitor]": "Notification event."})
             data_observed = json.loads(event.data)
 
-            kafka_topic = kafka_observe_topics.get(data_observed['res'])
-            kafka_producer.send(kafka_topic, data_observed['val'])
+            try:
+                topic_key = data_observed['res']
+                kafka_topic = kafka_observe_topics.get(topic_key)
+                kafka_producer.send(kafka_topic, data_observed['val'])
+            except:
+                # in case there is any random observation with no topic associated, we delete it
+                delete_observation(
+                    device_data['ip'],
+                    device_data['port'],
+                    data_observed['ep'],
+                    data_observed['res'],
+                    kafka_producer
+                )
 
 
 def read(device_ip, device_port, endpoint_name, accessing, kafka_topic, kafka_producer):
@@ -147,14 +151,14 @@ def read(device_ip, device_port, endpoint_name, accessing, kafka_topic, kafka_pr
     If resource not found or Device not found either, it returns {success: False, message: messageError}
 
     '''
-    logger.debug("[Leshan Monitor]: Read operation requested")
 
-    url = 'http://{}:{}/api/clients/{}/{}?format=JSON'
-    url.format(device_ip, device_port, endpoint_name, accessing)
+    url = 'http://{}:{}/api/clients/{}{}?format=JSON'.format(device_ip, device_port, endpoint_name, accessing)
     request = requests.get(url=url)
+    kafka_producer.send("LogTopic", {"[Leshan Monitor]": "Performing READ operation."+url})
 
     if request.status_code == 200:
         data = json.loads(request.text)
+
         if data["success"]:
             # send this data to the final application
             data_to_send = {'data': data['content']['value']}
@@ -165,11 +169,12 @@ def read(device_ip, device_port, endpoint_name, accessing, kafka_topic, kafka_pr
         # send fail to kafka topic
         data_to_send = {'success': False}
 
+    kafka_producer.send("LogTopic", {"[Leshan Monitor]": "Status code: {} | Sending read data.".format(request.status_code)})
+
     kafka_producer.send(kafka_topic, data_to_send)
-    kafka_producer.flush()
 
 
-def write(device_ip, device_port, endpoint_name, accessing, data):
+def write(device_ip, device_port, endpoint_name, accessing, data, kafka_producer):
     '''
     This method will try to write the passed values into a desired resource and return True if Success or False otherwise.
     Resources route are like the following: accessing/code = /3303/0/5601 (accessing= /3303/0, code=5601)
@@ -177,10 +182,9 @@ def write(device_ip, device_port, endpoint_name, accessing, data):
     Data format example: {'id': '0', 'resources': [{'id': "5700", 'value': "5"}]}
 
     '''
-    logger.debug("[Leshan Monitor]: Write operation requested")
+    kafka_producer.send("LogTopic", {"[Leshan Monitor]": "Performing WRITE operation."})
 
-    url = 'http://{}:{}/api/clients/{}/{}?format=JSON'
-    url.format(device_ip, device_port, endpoint_name, accessing)
+    url = 'http://{}:{}/api/clients/{}{}?format=JSON'.format(device_ip, device_port, endpoint_name, accessing)
 
     # json will set content-type to "application/json", otherwise it fails
     response = requests.put(url=url, json=data)
@@ -192,15 +196,14 @@ def write(device_ip, device_port, endpoint_name, accessing, data):
     return success
 
 
-def execute(device_ip, device_port, endpoint_name, accessing):
+def execute(device_ip, device_port, endpoint_name, accessing, kafka_producer):
     '''
     This method will make the operation EXECUTE of the desired resource and return its code status or error in case of fail.
     Resources route are like the following: accessing/code = /3303/0/5601 (accessing= /3303/0, code=5601)
     '''
-    logger.debug("[Leshan Monitor]: Execute operation requested")
+    kafka_producer.send("LogTopic", {"[Leshan Monitor]": "Performing EXECUTE operation."})
 
-    url = 'http://{}:{}/api/clients/{}/{}'
-    url.format(device_ip, device_port, endpoint_name, accessing)
+    url = 'http://{}:{}/api/clients/{}{}'.format(device_ip, device_port, endpoint_name, accessing)
     response = requests.post(url=url)
     success = True
 
@@ -210,29 +213,29 @@ def execute(device_ip, device_port, endpoint_name, accessing):
     return success
 
 
-def observe(device_ip, device_port, endpoint_name, accessing, kafka_topic):
+def observe(device_ip, device_port, endpoint_name, accessing, kafka_topic, kafka_producer):
     '''Given the following Resource data, this method starts the observation of its value'''
-    logger.debug("[Leshan Monitor]: Observe operation requested")
+
+    # we add the new topic to the observe topics
     kafka_observe_topics[accessing] = kafka_topic
 
-    url = 'http://{}:{}/api/clients/{}/{}/observe?format=JSON'
-    url.format(device_ip, device_port, endpoint_name, accessing)
-    requests.post(url=url)
+    url = 'http://{}:{}/api/clients/{}{}/observe?format=JSON'.format(device_ip, device_port, endpoint_name, accessing)
+    kafka_producer.send("LogTopic", {"[Leshan Monitor]": "Performing OBSERVE operation."+url})
+    r = requests.post(url=url)
+    kafka_producer.send("LogTopic", {"[Leshan Monitor]": "OBSERVE operation status code {}.".format(r.status_code)})
 
 
-def delete_observation(device_ip, device_port, endpoint_name, accessing):
+def delete_observation(device_ip, device_port, endpoint_name, accessing, kafka_producer):
     """This method stops an observation when it's required"""
-    logger.debug("[Leshan Monitor]: Delete Observation operation requested")
-    url = 'http://{}:{}/api/clients/{}/{}/observe'
-    url.format(device_ip, device_port, endpoint_name, accessing)
+    kafka_producer.send("LogTopic", {"[Leshan Monitor]": "Performing DELETE_OBSERVATION operation."})
+    url = 'http://{}:{}/api/clients/{}{}/observe'.format(device_ip, device_port, endpoint_name, accessing)
     requests.delete(url=url)
 
 
-def delete(device_ip, device_port, endpoint_name, accessing):
+def delete(device_ip, device_port, endpoint_name, accessing, kafka_producer):
     """This method deletes a specific resource"""
-    logger.debug("[Leshan Monitor]: Delete operation requested")
-    url = 'http://{}:{}/api/clients/{}/{}'
-    url.format(device_ip, device_port, endpoint_name, accessing)
+    kafka_producer.send("LogTopic", {"[Leshan Monitor]": "Performing DELETE operation."})
+    url = 'http://{}:{}/api/clients/{}{}'.format(device_ip, device_port, endpoint_name, accessing)
     requests.delete(url=url)
 
 # ---------------------------SOME AUX LOCAL METHODS-----------------------
@@ -240,22 +243,38 @@ def delete(device_ip, device_port, endpoint_name, accessing):
 
 def read_and_execute_action_from_buffer(sh_semaphore, sh_buffer, device_data, kafka_producer):
     acquired = sh_semaphore.acquire(blocking=False)  # we do not want the monitor to get blocked
-    logger.debug("[Leshan Monitor]: Reading operation from buffer.")
+
     if acquired:
         message = sh_buffer.pop()
+        """
+        message_example = {
+                        'application': request.POST['app_name'],
+                        'iot_connector': data['id_iotconnector'],
+                        'shadow': data['shadow_id'],
+                        'endpoint': data['id_endpoint'],
+                        'resource': data['id_resource'],
+                        'accessing': request.POST['resource_accessing'],
+                        'operation': request.POST['operation'],
+                        'kafka_topic': new_topic_name
+                    }
+        """
+
         sh_semaphore.release()
 
         if message['operation'] == 'OBSERVE':
+            kafka_producer.send("LogTopic", {"[Leshan Monitor]": "Read OBSERVE operation."})
             accessing = message['resource_accessing']
             observe(
                 device_data['ip'],
                 device_data['port'],
                 message['endpoint_name'],
                 accessing,
-                kafka_observe_topics[accessing]
+                message["kafka_topic"],
+                kafka_producer  # for debugging
             )
 
         elif message['operation'] == 'READ':
+            kafka_producer.send("LogTopic", {"[Leshan Monitor]": "Read READ operation."})
             read(
                 device_data['ip'],
                 device_data['port'],
@@ -266,36 +285,44 @@ def read_and_execute_action_from_buffer(sh_semaphore, sh_buffer, device_data, ka
             )
 
         elif message['operation'] == 'WRITE':
+            kafka_producer.send("LogTopic", {"[Leshan Monitor]": "Read WRITE operation."})
             write(
                 device_data['ip'],
                 device_data['port'],
                 message['endpoint_name'],
                 message['resource_accessing'],
-                message['data']
+                message['data'],
+                kafka_producer  # FOR DEBUGGING
             )
 
         elif message['operation'] == 'EXECUTE':
+            kafka_producer.send("LogTopic", {"[Leshan Monitor]": "Read EXECUTE operation."})
             execute(
                 device_data['ip'],
                 device_data['port'],
                 message['endpoint_name'],
-                message['resource_accessing']
+                message['resource_accessing'],
+                kafka_producer  # FOR DEBUGGING
             )
 
         elif message['operation'] == 'DELETE':
+            kafka_producer.send("LogTopic", {"[Leshan Monitor]": "Read DELETE operation."})
             delete(
                 device_data['ip'],
                 device_data['port'],
                 message['endpoint_name'],
-                message['resource_accessing']
+                message['resource_accessing'],
+                kafka_producer  # FOR DEBUGGING
             )
 
         elif message['operation'] == 'DELETE_OBSERVATION':  # Modify later
+            kafka_producer.send("LogTopic", {"[Leshan Monitor]": "Read DELETE_OBSERVATION operation."})
             delete_observation(
                 device_data['ip'],
                 device_data['port'],
                 message['endpoint_name'],
-                message['resource_accessing']
+                message['resource_accessing'],
+                kafka_producer  # FOR DEBUGGING
             )
         else:
-            raise Exception("Operation not valid.")
+            raise IndexError("Operation not valid.")

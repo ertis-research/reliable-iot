@@ -6,7 +6,7 @@ import json
 
 
 class URL:
-    # DB_URL = 'http://127.0.0.1:8080/'  # on local for tests
+    # DB_URL = 'http://127.0.0.1:8084/'  # on local for tests
     DB_URL = 'http://mongoapi:80/'  # on docker swarm
 
 
@@ -55,7 +55,7 @@ class KfkProducer:
             raise Exception("This class is a singleton!")
         else:
             KfkProducer.__instance = \
-                KafkaProducer(bootstrap_servers='kafka:9094',
+                KafkaProducer(bootstrap_servers=['kafka1:9092', 'kafka2:9092'],
                               client_id='iot_shadow_applications',
                               value_serializer=lambda v: json.dumps(v).encode('utf-8')
                               )
@@ -78,6 +78,6 @@ class KfkAdminClient:
             raise Exception("This class is a singleton!")
         else:
             KfkAdminClient.__instance =\
-                KafkaAdminClient(bootstrap_servers='kafka:9094',
+                KafkaAdminClient(bootstrap_servers=['kafka1:9092', 'kafka2:9092'],
                                  client_id='iot_shadow_applications',
                                  )

@@ -38,13 +38,17 @@ def get_resource_use_by_epid_shdwid(request, ep_id, shdw_id):
                                  status=HTTPStatus.BAD_REQUEST)
 
 
-def get_similar_logic(request, shdw_id, res_code, operation):
+def get_similar_logic(request, res_code, operation, shdw_id=None):
     if request.META.get('HTTP_AUTHORIZATION'):  # This checks if token is passed
         token = request.META.get('HTTP_AUTHORIZATION').split(' ')[1]  # 'Token adsad' -> ['Token', 'adsad'] -> 'adsad'
 
         # CHECK THE TOKEN
         if core.validate(token):
-            logic_list = ResourceUse.objects(shadow=shdw_id, operation=operation)
+
+            if shdw_id:  # the search could be in one shadow or every shadow
+                logic_list = ResourceUse.objects(shadow=shdw_id, operation=operation)
+            else:
+                logic_list = ResourceUse.objects(operation=operation)
 
             for logic in logic_list:
                 if logic.resource.type == int(res_code):
@@ -95,7 +99,7 @@ def create(request):
 
             new_usage = ResourceUse()
             new_usage._id = uuid.uuid4().__str__()
-            new_usage.application = app.to_dbref()
+            new_usage.applications.append(app.to_dbref())
             new_usage.shadow = shdw.to_dbref()
             new_usage.iot_connector = connector.to_dbref()
             new_usage.endpoint = ep.to_dbref()

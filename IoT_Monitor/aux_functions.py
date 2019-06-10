@@ -160,7 +160,6 @@ def store_endpoints_and_resources(endpoint_list, device_id, token):
 
     headers = {'Authorization': 'Token {}'.format(token)}
     url_update_device = db_url + 'updatePhysicalDevice/{}/'.format(device_id)
-    url_update_endpoint = db_url + 'updateEndpoint/{}/'
 
     device_endpoint_ids = []  # for device update
 
