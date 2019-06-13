@@ -30,12 +30,8 @@ def get_resource(request, res_id):
 
 def get_similar_resource(request, res_code, shdw_id=None):
     """
-    Given info through the data body, this method tries to look for a similar resource as indicated.
-    Body data example:
-    {
-        "resource_code" : <a numeric code> (mandatory | e.g. 5700)
-        "shadow_id" : <shadow_id> (optional)
-    }
+    Given a Resource code and a Shadow id (optional), this method tries to search for a similar resource
+    in every shadow device or in a specific one if shadow id is passed
 
     """
     if request.META.get('HTTP_AUTHORIZATION'):
@@ -114,7 +110,9 @@ def store_resource(request):
 
 
 def update_resource(request, endpoint_id):
-    '''Given an endpoint id, this method updates all the resources' status related to it'''
+    '''
+    Given an endpoint id, this method updates all the resources' status related to it
+    '''
 
     if request.META.get('HTTP_AUTHORIZATION'):
         token = request.META.get('HTTP_AUTHORIZATION').split(' ')[1]
@@ -212,10 +210,7 @@ def resource_status(request, res_id):
 
 def get_shadow_resources(request, shdw_id):
     '''
-    Given a shadow id, this method fetches the token from the db and returns it.
-    :param request: HttpRequest
-    :param shdw_id: String
-    :return: tokens: Json
+    Given a shadow id, this method fetches all the resources that belong to a specific shadow device.
     '''
     if request.META.get('HTTP_AUTHORIZATION'):
         token = request.META.get('HTTP_AUTHORIZATION').split(' ')[1]
@@ -246,9 +241,6 @@ def get_shadow_resources(request, shdw_id):
 def get_device_resources(request, dev_id):
     '''
     Given a device id, this method fetches all its resources and returns them.
-    :param request: HttpRequest
-    :param dev_id: String
-    :return:
     '''
     if request.META.get('HTTP_AUTHORIZATION'):
         token = request.META.get('HTTP_AUTHORIZATION').split(' ')[1]
@@ -279,8 +271,9 @@ def get_device_resources(request, dev_id):
 
 def search_res_in_shadow(shadow, res_type):
     '''
-    if found update success to true and 0K status code,
-    otherwise, false and Not Found.
+    This auxiliar method looks for a specific resource in a specific shadow device
+    if found, OK status code & data are returned,
+    otherwise, Success = false and Not Found.
     '''
 
     data_to_return = {'success': False}

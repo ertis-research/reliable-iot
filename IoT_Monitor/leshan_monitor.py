@@ -12,7 +12,7 @@ kafka_observe_topics = {}  # "/3303/0/5700": "topic_name"
 
 
 def get_data_stream(token, api_endpoint, device_data, shadow_device_id):
-    """ Start REST streaming device events given a Nest token.  """
+    """ Start monitoring EVENTS by SSE client  """
 
     kafka_producer = KafkaProducer(bootstrap_servers=['kafka1:9092', 'kafka2:9092'],
                                    client_id=device_data['_id'],
@@ -238,6 +238,7 @@ def delete(device_ip, device_port, endpoint_name, accessing, kafka_producer):
 
 
 def read_and_execute_action_from_buffer(sh_semaphore, sh_buffer, device_data, kafka_producer):
+    """Checks the buffer for an action & executes it if there is some"""
     acquired = sh_semaphore.acquire(blocking=False)  # we do not want the monitor to get blocked
 
     if acquired:

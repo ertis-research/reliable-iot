@@ -71,10 +71,7 @@ def get_shadow_by_id(request, shdw_id):
 
 def get_shadows_by_user_id(request, user_id):  # check token if valid later
     '''
-    Given an user id, this method searches for it's shadow devices in the database
-    :param request:
-    :param user_id:
-    :return: JSON shadow list
+    Given an user id, this method searches for it's shadow devices in the database and returns them
     '''
     if request.META.get('HTTP_AUTHORIZATION'):
         token = request.META.get('HTTP_AUTHORIZATION').split(' ')[1]
@@ -181,10 +178,8 @@ def delete_shadow(request, shdw_id):
 
 def get_shadow_tokens(request, shdw_id):
     '''
-    Given a shadow device id, this method fetches the shadow's tokens from the db and returns them in a list.
-    :param request: HttpRequest
-    :param shdw_id: String
-    :return: tokens: Json
+    Given a shadow device id, this method fetches the shadow's tokens from the db and returns them in a JSON
+    object with a list.
     '''
     if request.META.get('HTTP_AUTHORIZATION'):
         token = request.META.get('HTTP_AUTHORIZATION').split(' ')[1]
@@ -211,10 +206,8 @@ def get_shadow_tokens(request, shdw_id):
 
 def get_shadow_devices(request, shdw_id):
     '''
-    Given a shadow id, this method fetches the devices from the db and returns them in a list.
-    :param request: HttpRequest
-    :param shdw_id: String
-    :return: tokens: Json
+    Given a shadow id, this method fetches the devices from the db and returns them in a JSON
+    object with a list.
     '''
     if request.META.get('HTTP_AUTHORIZATION'):
         token = request.META.get('HTTP_AUTHORIZATION').split(' ')[1]

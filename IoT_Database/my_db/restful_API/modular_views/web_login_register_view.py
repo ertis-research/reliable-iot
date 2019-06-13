@@ -13,9 +13,7 @@ mongo_setup.global_init()  # makes connection with db
 
 def login(request):
     """
-    - When GET is received, it returns the login template
     - When POST is received, it performs user data check & validation
-
     """
     if request.POST:
         email = request.POST['email']
@@ -48,9 +46,7 @@ def login(request):
 
 def register(request):
     """
-    - When GET is received, it returns the register template
     - When POST is received, it performs user data check & registration
-
     """
 
     if request.POST:

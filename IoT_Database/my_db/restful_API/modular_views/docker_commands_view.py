@@ -8,7 +8,7 @@ import uuid
 mongo_setup.global_init()  # makes connection with db
 
 
-def get_connector_by_type(request, d_type=None):
+def get_connector_by_type(request, d_type):
     """
     Given a connector Type, this method searches it in the DB and returns it if found.
     """
@@ -53,7 +53,7 @@ def get_all(request):
 
 def store_type(request):
     '''
-    This method expects a dict passed in the body with the following fields:
+    This method expects a dict passed in the body with the following mandatory fields:
     {
     type : text:String,
     image: text:String
@@ -62,8 +62,8 @@ def store_type(request):
     With this information it store in the database a new IoT Connector Type.
 
     WARNING: THIS METHOD DOESN'T CHECK WHETHER THE SYSTHEM SUPPORTS OR NOT THE NEW REGISTERED TYPE.
-    IT DOESN'T EITHER CHECKS IF THE DOCKER IMAGE EXISTS.
-
+    IT DOESN'T EITHER CHECKS IF THE DOCKER IMAGE EXISTS. BEFORE YOU REGISTER A NEW TYPE MAKE SURE THE
+    SYSTEM SUPPORTS IT AND ALSO THE DOCKER IMAGE IS CREATED.
     '''
 
     if request.META.get('HTTP_AUTHORIZATION'):

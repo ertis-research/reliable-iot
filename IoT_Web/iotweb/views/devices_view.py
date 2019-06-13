@@ -10,6 +10,11 @@ import json
 
 
 def devices(request, shdw_id):
+    """
+    GET request: renders the physical devices page
+    POST request: It's a request to delete one physical device
+    """
+
     user = User.get_instance()
 
     if request.POST:  # REQUEST TO DELETE DEVICE

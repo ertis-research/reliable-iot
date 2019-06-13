@@ -20,8 +20,6 @@ def generate_token(request):
     email: (in case of USER type)
 
     }
-    :param request:HttpRequest
-    :return: token:json
     '''
 
     if request.POST:
@@ -44,15 +42,7 @@ def generate_token(request):
 def get_token_by_id(request, token_id):
     '''
     Given a token_id, this method fetches the token from the db and returns it.
-    :param request: HttpRequest
-    :param token_id: String
-    :return: token:String
     '''
-
-    # if request.META.get('HTTP_AUTHORIZATION'):
-    #     token = request.META.get('HTTP_AUTHORIZATION').split(' ')[1]
-    #     if core.validate(token):
-
     token_object = Token.objects.with_id(token_id)
     if token_object:
         token = token_object.token
@@ -63,18 +53,10 @@ def get_token_by_id(request, token_id):
 
     return http.JsonResponse(data={'token': token}, status=status)
 
-    #     else:
-    #         return http.JsonResponse(data={'message': 'Token invalid or expired.'}, status=HTTPStatus.UNAUTHORIZED)
-    # else:
-    #     return http.JsonResponse(data={'message': "Authentication credentials not provided"}, status=HTTPStatus.BAD_REQUEST)
-
 
 def get_tokens_by_user_id(request, user_id):  # this will validate a token (gets it from header)
     '''
-    Given an user id this method searches for it's token in the database
-    :param request:HttpRequest
-    :param user_id: String
-    :return: token:Json
+    Given an user id this method searches for it's token in the database and returns it
     '''
     if request.META.get('HTTP_AUTHORIZATION'):
         token = request.META.get('HTTP_AUTHORIZATION').split(' ')[1]
@@ -99,10 +81,7 @@ def get_tokens_by_user_id(request, user_id):  # this will validate a token (gets
 
 def get_tokens_by_shadow(request, shadow_id):
     '''
-    Given a shadow id, this method searches for it's tokens in the database
-    :param request:
-    :param shadow_id:
-    :return: JSON token list
+    Given a shadow id, this method searches for it's tokens in the database and returns them
     '''
 
     if request.META.get('HTTP_AUTHORIZATION'):

@@ -10,6 +10,10 @@ import json
 
 
 def tokens(request, shdw_id):
+    """
+    GET request: renders the token page
+    POST request: revokes a specific token
+    """
     user = User.get_instance()
 
     if not request.POST:
@@ -70,6 +74,7 @@ def tokens(request, shdw_id):
 
 
 def new_token(request, shdw_id):
+    '''generates a new token and refresh the page'''
     user = User.get_instance()
 
     url = UM.DB_URL+'generateToken/'

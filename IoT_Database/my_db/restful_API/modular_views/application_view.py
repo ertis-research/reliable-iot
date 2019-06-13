@@ -10,7 +10,7 @@ mongo_setup.global_init()  # makes connection with db
 
 
 def get_app(request, app_id):
-    """This method returns the app related to the id passed"""
+    """This method fetches and return a specific application"""
 
     if request.META.get('HTTP_AUTHORIZATION'):  # This checks if token is passed
         token = request.META.get('HTTP_AUTHORIZATION').split(' ')[1]  # 'Token adsad' -> ['Token', 'adsad'] -> 'adsad'
@@ -56,7 +56,9 @@ def get_all(request):
 
 def store_or_update_app(request, name):
     '''
-    Given an App name, this method performs the update of the database object related to the id.
+    Given an App name, this method performs the update of the database object related to the app name (if exists)
+    or
+    Stores a new application.
 
     Type of message in the request body:
     {
@@ -106,7 +108,7 @@ def store_or_update_app(request, name):
 
 def delete_app(request, app_id):
     '''
-    This Method deletes a the shadow device related to the name given
+    This Method deletes an application from the DB by its ID
     '''
 
     if request.META.get('HTTP_AUTHORIZATION'):

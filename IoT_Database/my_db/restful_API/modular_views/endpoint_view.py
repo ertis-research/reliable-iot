@@ -33,7 +33,7 @@ def get_endpoint_by_id(request, ep_id):
 
 def get_endpoint_by_leshanid(request, leshan_id):
     '''
-        Given an Endpoint _id, this method fetches the Endpoint from the db and returns it.
+        Given an Endpoint leshan_id, this method fetches the Endpoint from the db and returns it. (if exists)
     '''
 
     if request.META.get('HTTP_AUTHORIZATION'):
@@ -89,7 +89,7 @@ def store_endpoint(request):
 
 
 def update_endpoint(request, ep_id):
-    '''Given an Endpoint leshan_id, this method performs the update of the database object related to the given id.'''
+    '''Given an Endpoint id, this method performs the update of the database object related to the given id.'''
 
     if request.META.get('HTTP_AUTHORIZATION'):
         token = request.META.get('HTTP_AUTHORIZATION').split(' ')[1]

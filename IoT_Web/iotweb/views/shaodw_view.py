@@ -10,6 +10,10 @@ import json
 
 
 def new_shadow(request):
+    """
+    GET request: render the page for a new shadow device
+    POST request: create the new shadow device
+    """
     user = User.get_instance()
 
     if request.POST:
@@ -44,6 +48,7 @@ def new_shadow(request):
 
 
 def delete_shadow(request, shdw_id):
+    '''Deletes a shadow device'''
     user = User.get_instance()
 
     # first we delete it's associated devices
@@ -81,6 +86,10 @@ def delete_shadow(request, shdw_id):
 
 
 def edit_shadow(request, shdw_id):
+    """
+    GET request: renders the edit page
+    POST request: makes the shadow device update
+    """
     user = User.get_instance()
 
     if request.POST:
@@ -128,6 +137,7 @@ def edit_shadow(request, shdw_id):
 
 
 def view_applications(request):
+    '''Renders the page that contains the apps of the systhem'''
     user = User.get_instance()
 
     template = loader.get_template('../templates/applications.html')

@@ -10,8 +10,8 @@ mongo_setup.global_init()  # makes connection with db
 
 
 def get_resource_use_by_epid_shdwid(request, ep_id, shdw_id):
-    """This method returns the usages of resources that belong to the endpoint related to the epid and related to the
-        shadow device whose id is passed too
+    """
+    This method returns the usages of resources that belong to a specific endpoint and to a specific shadow device
     """
 
     if request.META.get('HTTP_AUTHORIZATION'):  # This checks if token is passed
@@ -23,7 +23,6 @@ def get_resource_use_by_epid_shdwid(request, ep_id, shdw_id):
             res_usages_list = []
 
             for res_usage in res_usages_fetched:
-                # verify later
                 jsn = res_usage.to_json()
                 jsn = json.loads(jsn)
                 jsn['resource_code'] = res_usage.resource.type  # we add the resource code too bc we need it :D
@@ -39,6 +38,11 @@ def get_resource_use_by_epid_shdwid(request, ep_id, shdw_id):
 
 
 def get_similar_logic(request, res_code, operation, shdw_id=None):
+    """
+    Given a Resource code, an Operation and a Shadow Id (optional), this method looks for a similar logic if
+    it's already created.
+    Note: It only makes sense for operation = OBSERVATION
+    """
     if request.META.get('HTTP_AUTHORIZATION'):  # This checks if token is passed
         token = request.META.get('HTTP_AUTHORIZATION').split(' ')[1]  # 'Token adsad' -> ['Token', 'adsad'] -> 'adsad'
 

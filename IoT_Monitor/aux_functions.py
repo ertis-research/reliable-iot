@@ -2,15 +2,12 @@ import requests
 import json
 
 ACCEPTED_TAGS = ['endpoint', 'registrationId', 'registrationDate', 'lastUpdate', 'address', 'lifetime']
-db_url = 'http://mongoapi:80/'  # mongoapi is the hostname of the Database restful API in the swarm
+db_url = 'http://mongoapi:80/'
 
 
 def get_real_device(dev_id, token):
     '''
     Given a Real Device Id, this method performs a request to the Database API in order to fetch an Real Device
-    :param dev_id: String
-    :param token: String
-    :return: dict
     '''
 
     url = db_url + 'getPhysicalDevice/{}/'.format(dev_id)
@@ -27,8 +24,7 @@ def get_real_device(dev_id, token):
 def purge_update_data(json_string):
     '''
     Takes an update Json String, converts it to Json Object and takes the essential data needed to store in the DB
-    :param json_string: String
-    :return: dict
+
     '''
 
     x = json.loads(json_string)
@@ -46,8 +42,6 @@ def get_leshan_resources_data(resources_list):
         Given a resource list, the basic data is returned in a list of Json objects ([{'accessing': '/1/0', 'type': '1'}, {...}, ...])
     (Resource list: e.g. [{"url":"/","attributes":{"rt":"oma.lwm2m"}},{"url":"/1/0","attributes":{}},{"url":"/3/0","attributes":{}}, {...}, ...])
 
-    :param resources_list: List
-    :return: dict
     '''
 
     return_data = []
@@ -67,8 +61,7 @@ def get_leshan_resources_data(resources_list):
 def get_ep_register_data(endpoint):
     '''
     Given an endpoint, it's essential data is returned in order to be stored in the DB
-    :param endpoint: dict
-    :return: dict
+
     '''
 
     ep_store_data = {
@@ -84,9 +77,6 @@ def ep_store_request(data, token):
     '''
     Performs a request to the Database API in order to store an Endpoint
 
-    :param data:dict
-    :param token: String
-    :return: int
     '''
 
     headers = {'Authorization': 'Token {}'.format(token)}
@@ -101,9 +91,6 @@ def ep_get_request(leshan_id, token):
     '''
     Performs a request to the Database API in order to store an Endpoint
 
-    :param leshan_id:String
-    :param token: String
-    :return: int
     '''
 
     headers = {'Authorization': 'Token {}'.format(token)}
@@ -117,9 +104,6 @@ def ep_get_request(leshan_id, token):
 def res_store_request(data, token):
     '''
     Performs a request to the Database API in order to store a Resource
-    :param data: dict
-    :param token: String
-    :return: int
     '''
 
     headers = {'Authorization': 'Token {}'.format(token)}
@@ -152,10 +136,6 @@ def store_endpoints_and_resources(endpoint_list, device_id, token):
         "secure":false,"additionalRegistrationAttributes":{}}
         ]
  )
-    :param endpoint_list: List of dicts
-    :param device_id: String
-    :param token: String
-    :return: None
     '''
 
     headers = {'Authorization': 'Token {}'.format(token)}
@@ -192,11 +172,6 @@ def update_endpoint(endpoint_id, data, token):
     '''
     Given an endpoint id some data and a valid token, this method updates the Database
     endpoint and resources (if status is modified)
-
-    :param endpoint_id: String
-    :param data: dict
-    :param token: String
-    :return: None
     '''
 
     headers = {'Authorization': 'Token {}'.format(token)}
@@ -207,9 +182,7 @@ def update_endpoint(endpoint_id, data, token):
 def get_endpoint_id(leshan_id, token):
     """
     Given a leshan id, this method queries the endpoint and returns the database endpoint _id
-    :param leshan_id:
-    :param token:
-    :return: id or None
+
     """
 
     headers = {'Authorization': 'Token {}'.format(token)}

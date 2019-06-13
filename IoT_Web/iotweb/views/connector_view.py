@@ -10,6 +10,7 @@ import json
 
 
 def connectors(request):
+    """Renders the page of the Iot Connectors"""
     user = User.get_instance()
 
     template = loader.get_template('../templates/iot_connectors.html')
@@ -41,6 +42,10 @@ def connectors(request):
 
 
 def new_connector(request):
+    """
+    GET request: renders the page for a new connector
+    POST request: Stores the connector and redirects to the connectors view
+    """
     user = User.get_instance()
 
     if request.POST:

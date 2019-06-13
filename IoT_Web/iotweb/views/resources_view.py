@@ -10,6 +10,7 @@ import json
 
 
 def shadow_resources(request, shdw_id):
+    """Renders the page that contains all the resources of a shadow device"""
     user = User.get_instance()
 
     template = loader.get_template('../templates/resources.html')
@@ -50,6 +51,11 @@ def shadow_resources(request, shdw_id):
 
 
 def dev_resources(request, dev_id):
+    """
+    GET request: renders the page with all the resources of a device
+    POST request: It's a request to delete a specific resource
+    """
+
     user = User.get_instance()
 
     if request.POST:  # REQUEST TO DELETE A RESOURCE

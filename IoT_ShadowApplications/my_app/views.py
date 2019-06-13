@@ -210,6 +210,7 @@ def logic_already_created(token, data_):
 
 
 def store_usage_data(token, data_):
+    """Performs a request to the database to store a ResourceUse instance"""
     headers = {'Authorization': 'Token {}'.format(token.token)}
 
     url = URL.DB_URL + 'createUsageResource/'
@@ -217,6 +218,7 @@ def store_usage_data(token, data_):
 
 
 def update_usage_data(token, data_, logic_id):
+    """Performs a request to the database to update a ResourceUse instance"""
     headers = {'Authorization': 'Token {}'.format(token.token)}
 
     url = URL.DB_URL + 'updateUsageResource/{}/'.format(logic_id)
@@ -224,6 +226,7 @@ def update_usage_data(token, data_, logic_id):
 
 
 def store_or_update_app(token, data_, appname):
+    """Performs a request to the database to store or update an Application"""
     headers = {'Authorization': 'Token {}'.format(token.token)}
     url_store_update = URL.DB_URL + 'storeOrUpdateApp/{}/'.format(appname)
     requests.post(url=url_store_update, data=data_, headers=headers)

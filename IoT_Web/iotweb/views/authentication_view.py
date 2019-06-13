@@ -10,11 +10,16 @@ import json
 
 
 def login_or_register(request):
+    """This endpoint renders the root page"""
     template = loader.get_template('../templates/login_or_register.html')
     return HttpResponse(template.render({}, request))
 
 
 def login(request):
+    """
+    GET request: renders the login page
+    POST request: authenticates the user and redirects to user homepage
+    """
     if request.POST:
         url = UM.DB_URL + 'login/'
         data = request.POST
@@ -47,6 +52,9 @@ def login(request):
 
 
 def logout(request):
+    """
+    Logs the user out revoking his session token and redirecting to login page
+    """
     user = User.get_instance()
     user.user_id = None
     user.user_email = None
@@ -62,6 +70,10 @@ def logout(request):
 
 
 def register(request):
+    """
+    GET request: renders the register page
+    POST request: registers the user and redirects him to user homepage
+    """
     if request.POST:
         url = UM.DB_URL + 'registerUser/'
         data = request.POST
@@ -94,6 +106,7 @@ def register(request):
 
 
 def profile(request):
+    """Renders user's main page"""
     template = loader.get_template('../templates/shadows.html')
     user = User.get_instance()
 

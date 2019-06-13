@@ -2,6 +2,7 @@ import threading
 
 
 class SharedBuffer(object):
+    """Shared class between leshan_monitor and kafka_consumer_thread"""
     __instance = None
 
     @staticmethod

@@ -1,4 +1,4 @@
-"""This is a singleton class to store the component token and database urls."""
+"""This is a singleton class to store the component token database urls and kafka Producer & Consumer"""
 
 from kafka import KafkaAdminClient, KafkaProducer
 import requests
