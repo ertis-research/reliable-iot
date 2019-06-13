@@ -61,13 +61,11 @@ def get_data_stream(token, api_endpoint, device_data, shadow_device_id):
 
         # Message check
         try:
-            kafka_producer.send("LogTopic", {"[Leshan Monitor]": "checking shared buffer."})
             read_and_execute_action_from_buffer(sh_semaphore, sh_buffer, device_data, kafka_producer)
 
         except IndexError:
             # it means there's no message in the buffer
             sh_semaphore.release()
-            kafka_producer.send("LogTopic", {"[Leshan Monitor]": "Empty shared buffer."})
 
         # Event check
         if event_type == 'UPDATED':  # updates periodically incoming
@@ -125,7 +123,6 @@ def get_data_stream(token, api_endpoint, device_data, shadow_device_id):
 
         elif event_type == 'NOTIFICATION':
             # data_observed e.g. = {"ep": "C1", "res": "/3303/0/5700", "val": {"id": 5700, "value": 18.1}}
-            kafka_producer.send("LogTopic",  {"[Leshan Monitor]": "Notification event."})
             data_observed = json.loads(event.data)
 
             try:
@@ -215,14 +212,13 @@ def execute(device_ip, device_port, endpoint_name, accessing, kafka_producer):
 
 def observe(device_ip, device_port, endpoint_name, accessing, kafka_topic, kafka_producer):
     '''Given the following Resource data, this method starts the observation of its value'''
+    kafka_producer.send("LogTopic", {"[Leshan Monitor]": "Performing OBSERVE operation."})
 
     # we add the new topic to the observe topics
     kafka_observe_topics[accessing] = kafka_topic
 
     url = 'http://{}:{}/api/clients/{}{}/observe?format=JSON'.format(device_ip, device_port, endpoint_name, accessing)
-    kafka_producer.send("LogTopic", {"[Leshan Monitor]": "Performing OBSERVE operation."+url})
-    r = requests.post(url=url)
-    kafka_producer.send("LogTopic", {"[Leshan Monitor]": "OBSERVE operation status code {}.".format(r.status_code)})
+    requests.post(url=url)
 
 
 def delete_observation(device_ip, device_port, endpoint_name, accessing, kafka_producer):

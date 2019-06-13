@@ -53,7 +53,7 @@ def get_similar_logic(request, res_code, operation, shdw_id=None):
             for logic in logic_list:
                 if logic.resource.type == int(res_code):
                     kafka_topic = logic.kafka_topic
-                    return http.JsonResponse(data={'kafka_topic': kafka_topic}, status=HTTPStatus.OK)
+                    return http.JsonResponse(data={'kafka_topic': kafka_topic, '_id': logic._id}, status=HTTPStatus.OK)
 
             # if program reaches this point, no similar logic was found
             return http.JsonResponse(data={'Message': HTTPStatus.NOT_FOUND.name}, status=HTTPStatus.NOT_FOUND)

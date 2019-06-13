@@ -10,37 +10,25 @@ The message this Module will receive is a JSON-like message that the consumer wi
 '''
 
 from kafka import KafkaProducer, KafkaConsumer
-from logging.handlers import SysLogHandler
 from singletonClass import Token, URL
+import uuid
 import requests
-import logging
 import json
 
 
-# for debugging purposes
-formatter = logging.Formatter('%(asctime)-15s %(name)-12s: %(levelname)-8s %(message)s')
-logger = logging.getLogger('my_logger')
-handler = SysLogHandler(address='/dev/log')
-handler.setFormatter(formatter)
-logger.addHandler(handler)
-logger.setLevel(logging.DEBUG)
-
-
-kafka_producer = KafkaProducer(#bootstrap_servers='127.0.0.1:9094',  # for local tests
-                               bootstrap_servers=['kafka1:9092', 'kafka2:9092'],
-                               client_id="iot_recovery_module",
-                               value_serializer=lambda v: json.dumps(v).encode('utf-8'),
+kafka_producer = KafkaProducer(bootstrap_servers=['kafka1:9092', 'kafka2:9092'],
+                               value_serializer=lambda v: json.dumps(v).encode('utf-8')
                                )
 
-kafka_consumer = KafkaConsumer(#bootstrap_servers='127.0.0.1:9094',  # for local tests
-                               bootstrap_servers=['kafka1:9092', 'kafka2:9092'],
-                               # auto_offset_reset='earliest',
+kafka_consumer = KafkaConsumer(bootstrap_servers=['kafka1:9092', 'kafka2:9092'],
+                               group_id="recovery",
+                               client_id=uuid.uuid4().__str__(),
                                value_deserializer=lambda m: json.loads(m.decode('utf-8'))
                                )
 
 kafka_consumer.subscribe(['FailureTopic'])
 
-headers = {'Authorization': 'Token {}'.format(Token.get_instance())}
+headers = {'Authorization': 'Token {}'.format(Token.get_instance().token)}
 
 
 def recovery(app_id, usage_id, shadow_id, resource_accessing, operation, app_old_topic):
@@ -48,6 +36,11 @@ def recovery(app_id, usage_id, shadow_id, resource_accessing, operation, app_old
     url_app = URL.DB_URL+'getApp/{}/'.format(app_id)
     resp_app = requests.get(url=url_app, headers=headers)
     app_data = json.loads(resp_app.text)['app']
+    app_data = json.loads(app_data)  # we got a json of a json, need to serialize twice
+
+    # delete the usage from the db
+    url_delete = URL.DB_URL + 'deleteUsageResource/{}/'.format(usage_id)
+    requests.delete(url=url_delete, headers=headers)
 
     # For an used resource we tell the IoT Shadow Applications to search a similar logic or create a new one
     url = 'http://iotshadowapplications:80/action/'
@@ -59,23 +52,19 @@ def recovery(app_id, usage_id, shadow_id, resource_accessing, operation, app_old
     }
     resp = requests.post(url=url, data=data, headers=headers)
 
-    if resp.status_code == 200:
-        new_kafka_topic_for_app = json.load(resp.text)['kafka_topic']
+    kafka_producer.send("LogTopic", "[Recovery]: Getting new logic from ShadoApps: {}".format(resp.status_code))
 
-        kafka_producer.send("LogTopic", {"[Iot Recovery]": "Sending new topic to app."})
+    if resp.status_code == 200:
+        kafka_producer.send("LogTopic", {"[Iot Recovery]": "Got the new topic."})
+        new_kafka_topic_for_app = json.loads(resp.text)['kafka_topic']
 
         # We send the app the new kafka topic
         kafka_producer.send(app_old_topic, {'new_kafka_topic': new_kafka_topic_for_app})
-        logger.debug("Recovery: Send the new topic to the app. ({})".format(new_kafka_topic_for_app))
-
+        kafka_producer.send("LogTopic", {"[Iot Recovery]": "Sending new topic to apps."})
+        
     else:
         # notify to the app through Kafka no more resource available.
         kafka_producer.send(app_old_topic, {"NOTIFICATION": "No resource available!"})
-
-        # delete from the db the usage
-        url_delete = URL.DB_URL + 'deleteUsageResource/{}/'.format(usage_id)
-        requests.delete(url=url_delete, headers=headers)
-
         kafka_producer.send("LogTopic", {"[Iot Recovery]": "Resource not available."})
 
 
@@ -96,10 +85,11 @@ for message in kafka_consumer:
 
         for res_usage in res_usage_list:
             aux_res_usage = json.loads(res_usage)  # serialize string to json object and store it into local var aux
+
             applications = aux_res_usage['applications']  # list of app ids using this resource
 
             for application in applications:
-                kafka_producer.send("LogTopic", "Recovery for application {}".format(application))
+                kafka_producer.send("LogTopic", "[Recovery]: Starting Recovery for application {}".format(application))
 
                 recovery(application,
                          aux_res_usage['_id'],

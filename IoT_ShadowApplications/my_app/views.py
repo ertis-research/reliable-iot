@@ -138,8 +138,9 @@ def action(request):
             else:  # if similar logic already created we only return the topic to the app
                 producer.send("LogTopic", {"[Iot Shadow Apps]": "Logic already created"})
 
+                store_or_update_app(token, {}, request.POST['app_name'])  # we store or update the app
                 message = {"Message": 'Success', "kafka_topic": data['kafka_topic']}
-                update_usage_data(token, {"application": request.POST['app_name']})
+                update_usage_data(token, {"application": request.POST['app_name']}, data['_id'])
                 code_to_return = 200
         else:
             code_to_return = HTTPStatus.BAD_REQUEST
@@ -169,7 +170,7 @@ def request_similar_resource(token, data_):
     req = requests.get(url=url_check_res, headers=headers)
 
     code_to_return = HTTPStatus.NOT_FOUND
-    data_to_return = {}
+    data_to_return = {"success": False}
 
     if req.status_code == HTTPStatus.OK:
         code_to_return = HTTPStatus.OK
@@ -203,7 +204,7 @@ def logic_already_created(token, data_):
         code_to_return = HTTPStatus.OK
         data_to_return['success'] = True
 
-        data_to_return.update(json.loads(req.text))  # {'kafka_topic': <topic> }
+        data_to_return.update(json.loads(req.text))  # {'kafka_topic': <topic>, '_id': 'logic_id' }
 
     return code_to_return, data_to_return
 
@@ -215,10 +216,10 @@ def store_usage_data(token, data_):
     requests.post(url=url, data=data_, headers=headers)
 
 
-def update_usage_data(token, data_):
+def update_usage_data(token, data_, logic_id):
     headers = {'Authorization': 'Token {}'.format(token.token)}
 
-    url = URL.DB_URL + 'updateUsageResource/'
+    url = URL.DB_URL + 'updateUsageResource/{}/'.format(logic_id)
     requests.post(url=url, data=data_, headers=headers)
 
 

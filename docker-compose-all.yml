@@ -51,7 +51,7 @@ services:
   iotrecovery:
     image: iotrecovery:latest
     deploy:
-      replicas: 3
+      replicas: 2
       restart_policy:
           condition: on-failure
     ports:
@@ -73,7 +73,8 @@ services:
       - target: 5683
         published: 5683
         protocol: udp
-#--------------KAFKA-ZOOKEEPER-----------
+        
+#--------------2-x-KAFKA -- 2-x-ZOOKEEPER-----------
   zookeeper1:
     image: zookeeper:latest
     restart: always
@@ -111,6 +112,7 @@ services:
       KAFKA_ZOOKEEPER_CONNECTION_TIMEOUT_MS: 36000
       KAFKA_LOG_RETENTION_BYTES: -1
       KAFKA_LOG_RETENTION_DAYS: 2
+      KAFKA_DEFAULT_REPLICATION_FACTOR: 2
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock
 
@@ -132,7 +134,7 @@ services:
       KAFKA_ZOOKEEPER_CONNECTION_TIMEOUT_MS: 36000
       KAFKA_LOG_RETENTION_BYTES: -1
       KAFKA_LOG_RETENTION_DAYS: 2
-      KAFKA_CREATE_TOPICS: "FailureTopic:2:2"
+      KAFKA_CREATE_TOPICS: "FailureTopic:2:2" # FailureTopic will have 3 partitions and 2 replicas
+      KAFKA_DEFAULT_REPLICATION_FACTOR: 2
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock
-
