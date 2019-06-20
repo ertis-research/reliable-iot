@@ -117,7 +117,8 @@ def action(request):
                         'operation': request.POST['operation'],
                         'kafka_topic': new_topic_name
                     }
-                    store_usage_data(token, _data)
+
+                    usage_id = store_usage_data(token, _data)
 
                     # We tell the iot connector to do the action asked for
                     iot_connector_data = {'operation': request.POST['operation'],
@@ -126,12 +127,13 @@ def action(request):
                                           'endpoint_name': data['name_endpoint']
                                           }
 
+                    # if the operation is write we need to pass to the connector the data
                     if "data" in request.POST and request.POST['operation'] == 'WRITE':
                         iot_connector_data['data'] = request.POST['data']
 
                     producer.send(data['id_iotconnector'], iot_connector_data)
 
-                    message = {"Message": 'Success', "kafka_topic": new_topic_name}
+                    message = {"Message": 'Success', "kafka_topic": new_topic_name, 'usage_id': usage_id}
                 else:
                     producer.send("LogTopic", {"[Iot Shadow Apps]": "Could not create New Logic"})
 
@@ -140,7 +142,7 @@ def action(request):
 
                 store_or_update_app(token, {}, request.POST['app_name'])  # we store or update the app
                 message = {"Message": 'Success', "kafka_topic": data['kafka_topic']}
-                update_usage_data(token, {"application": request.POST['app_name']}, data['_id'])
+                update_usage_data(token, {"applications": json.dumps([request.POST['app_name']])}, data['_id'])
                 code_to_return = 200
         else:
             code_to_return = HTTPStatus.BAD_REQUEST
@@ -214,7 +216,12 @@ def store_usage_data(token, data_):
     headers = {'Authorization': 'Token {}'.format(token.token)}
 
     url = URL.DB_URL + 'createUsageResource/'
-    requests.post(url=url, data=data_, headers=headers)
+    req = requests.post(url=url, data=data_, headers=headers)
+
+    try:
+        return json.loads(req.text)['usage_id']
+    except:
+        return None
 
 
 def update_usage_data(token, data_, logic_id):

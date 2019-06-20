@@ -113,7 +113,7 @@ def create(request):
             new_usage.operation = data['operation']
             new_usage.save()
 
-            return http.JsonResponse(data={'message': HTTPStatus.OK.name}, status=HTTPStatus.OK)
+            return http.JsonResponse(data={'usage_id': new_usage._id}, status=HTTPStatus.OK)
         else:
             return http.JsonResponse(data={'message': 'Token invalid or expired.'}, status=HTTPStatus.UNAUTHORIZED)
     else:
@@ -121,7 +121,7 @@ def create(request):
                                  status=HTTPStatus.BAD_REQUEST)
 
 
-def update(request, obj_id):
+def update(request, usage_id):
     """
     This method updates the usage information in the DB.
 
@@ -133,7 +133,7 @@ def update(request, obj_id):
         'resource': <resource_id>,
         'accessing': <string>,
         'kafka_topic': <kafka_topic>,
-        'application': <app_name>
+        'applications': [<app_name>]
     }
 
     All fields in the data dict are optional.
@@ -147,17 +147,17 @@ def update(request, obj_id):
         if core.validate(token):
 
             data = request.POST
-            usage = ResourceUse.objects.with_id(obj_id)  # it could be None (if it's not in the db)
+            usage = ResourceUse.objects.with_id(usage_id)  # it could be None (if it's not in the db)
 
             if usage:
+                if 'applications' in data:
+                    for app in json.loads(data['applications']):
 
-                if 'application' in data:
-                    new_app = data['application']
-                    app = Application.objects(name=new_app)
-                    if app.count():
-                        app = app.first()
-                        app.save()
-                        usage.applications.append(app.to_dbref())
+                        db_app = Application.objects(name=app)
+                        if db_app.count():
+                            db_app = db_app.first()
+                            db_app.save()
+                            usage.applications.append(db_app.to_dbref())
 
                 if 'shadow' in data:
                     new_shadow = data['shadow']

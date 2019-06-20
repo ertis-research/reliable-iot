@@ -186,9 +186,47 @@ def get_endpoint_id(leshan_id, token):
     """
 
     headers = {'Authorization': 'Token {}'.format(token)}
-    update_endpoint_url = db_url + 'getEndpointByLeshanId/{}/'.format(leshan_id)
-    r = requests.get(url=update_endpoint_url, headers=headers)
+    request_url = db_url + 'getEndpointByLeshanId/{}/'.format(leshan_id)
+    r = requests.get(url=request_url, headers=headers)
     if r.status_code == 200:
         return json.loads(r.text)['endpoint_id']
 
     return None
+
+
+def remove_old_topics(kafka_observe_topics, accessing_list, kafka_admin_client, kafka_producer):
+    """
+    For every url in accessing_list, we try to remove it from the kafka topic dict (if exists)
+    accessing_list: (example)
+    [
+        {"url":"/","attributes":{"rt":"oma.lwm2m"}},
+        {"url":"/1/0","attributes":{}},
+        {"url":"/3/0","attributes":{}},
+        {"url":"/6/0","attributes":{}},
+        {"url":"/3303/0","attributes":{}}
+    ]
+
+
+    kafka_observe_topics: (example)
+    {
+        '/3303/0/5700' : 'a_topic_name'
+    }
+    """
+
+    # if dict is empty there is no point in doing this
+    if kafka_observe_topics:
+        # we get only the url values from the accessing list (we also avoid'/' url)
+        url_list = [acc['url'] for acc in accessing_list if acc['url'] != '/']
+
+        # the keys we need to remove are those who starts with any of the url in url_list
+        keys_to_remove = [key for key in kafka_observe_topics for url in url_list if key.startswith(url)]
+
+        kafka_topics_to_delete = []
+
+        for key in keys_to_remove:
+            kafka_topic = kafka_observe_topics.pop(key, None)
+
+            if kafka_topic:  # if not none, we delete the topic
+                kafka_topics_to_delete.append(kafka_topic)
+
+        kafka_admin_client.delete_topics(kafka_topics_to_delete)

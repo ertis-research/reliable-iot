@@ -1,4 +1,4 @@
-from kafka import KafkaProducer, KafkaConsumer
+from kafka import KafkaProducer, KafkaConsumer, KafkaAdminClient
 from kafka_consumer_thread import KfkConsumer
 from shared_buffer import SharedBuffer
 import aux_functions
@@ -22,6 +22,11 @@ def get_data_stream(token, api_endpoint, device_data, shadow_device_id):
     kafka_consumer = KafkaConsumer(bootstrap_servers=['kafka1:9092', 'kafka2:9092'],
                                    value_deserializer=lambda m: json.loads(m.decode('utf-8'))
                                    )
+
+    kafka_admin_client = KafkaAdminClient(
+        bootstrap_servers=['kafka1:9092', 'kafka2:9092'],
+        client_id=device_data['_id']
+    )
 
     # we start a thread that constantly reads from kafka
     kafka_consumer.subscribe([device_data['_id']])
@@ -110,6 +115,16 @@ def get_data_stream(token, api_endpoint, device_data, shadow_device_id):
             kafka_producer.send("LogTopic", {"[Leshan Monitor]": "Deregistration event."})
 
             endpoint = json.loads(event.data)
+
+            # When deregistration occurs, kafka topics are updated
+            aux_functions.remove_old_topics(
+                kafka_observe_topics,
+                endpoint['objectLinks'],
+                kafka_admin_client,
+                kafka_producer
+            )
+            kafka_producer.send("LogTopic", {"[Leshan Monitor]": "All topics after deregistration event: {}.".format(kafka_observe_topics)})
+
             endpoint_id = aux_functions.get_endpoint_id(endpoint['registrationId'], token)
             aux_functions.update_endpoint(endpoint_id, {'status': 0}, token)
 
@@ -151,7 +166,7 @@ def read(device_ip, device_port, endpoint_name, accessing, kafka_topic, kafka_pr
 
     url = 'http://{}:{}/api/clients/{}{}?format=JSON'.format(device_ip, device_port, endpoint_name, accessing)
     request = requests.get(url=url)
-    kafka_producer.send("LogTopic", {"[Leshan Monitor]": "Performing READ operation."+url})
+    kafka_producer.send("LogTopic", {"[Leshan Monitor]": "Performing READ operation."})
 
     if request.status_code == 200:
         data = json.loads(request.text)
@@ -165,8 +180,6 @@ def read(device_ip, device_port, endpoint_name, accessing, kafka_topic, kafka_pr
     else:
         # send fail to kafka topic
         data_to_send = {'success': False}
-
-    kafka_producer.send("LogTopic", {"[Leshan Monitor]": "Status code: {} | Sending read data.".format(request.status_code)})
 
     kafka_producer.send(kafka_topic, data_to_send)
 
@@ -212,27 +225,31 @@ def execute(device_ip, device_port, endpoint_name, accessing, kafka_producer):
 
 def observe(device_ip, device_port, endpoint_name, accessing, kafka_topic, kafka_producer):
     '''Given the following Resource data, this method starts the observation of its value'''
-    kafka_producer.send("LogTopic", {"[Leshan Monitor]": "Performing OBSERVE operation."})
 
     # we add the new topic to the observe topics
     kafka_observe_topics[accessing] = kafka_topic
 
     url = 'http://{}:{}/api/clients/{}{}/observe?format=JSON'.format(device_ip, device_port, endpoint_name, accessing)
-    requests.post(url=url)
+    r = requests.post(url=url)
+    kafka_producer.send("LogTopic", {"[Leshan Monitor]": "Performing OBSERVE operation."})
 
 
 def delete_observation(device_ip, device_port, endpoint_name, accessing, kafka_producer):
     """This method stops an observation when it's required"""
-    kafka_producer.send("LogTopic", {"[Leshan Monitor]": "Performing DELETE_OBSERVATION operation."})
+
     url = 'http://{}:{}/api/clients/{}{}/observe'.format(device_ip, device_port, endpoint_name, accessing)
-    requests.delete(url=url)
+    r = requests.delete(url=url)
+    kafka_producer.send("LogTopic", {"[Leshan Monitor]": "Performing DELETE_OBSERVATION operation. status_code: {}".format(r.status_code)})
+    # we also delete the topic
+    kafka_observe_topics.pop(accessing, None)
 
 
 def delete(device_ip, device_port, endpoint_name, accessing, kafka_producer):
     """This method deletes a specific resource"""
-    kafka_producer.send("LogTopic", {"[Leshan Monitor]": "Performing DELETE operation."})
     url = 'http://{}:{}/api/clients/{}{}'.format(device_ip, device_port, endpoint_name, accessing)
-    requests.delete(url=url)
+    r = requests.delete(url=url)
+
+    kafka_producer.send("LogTopic", {"[Leshan Monitor]": "Performing DELETE operation. status code {}".format(r.status_code)})
 
 # ---------------------------SOME AUX LOCAL METHODS-----------------------
 
@@ -245,14 +262,14 @@ def read_and_execute_action_from_buffer(sh_semaphore, sh_buffer, device_data, ka
         message = sh_buffer.pop()
         """
         message_example = {
-                        'application': request.POST['app_name'],
-                        'iot_connector': data['id_iotconnector'],
-                        'shadow': data['shadow_id'],
-                        'endpoint': data['id_endpoint'],
-                        'resource': data['id_resource'],
-                        'accessing': request.POST['resource_accessing'],
-                        'operation': request.POST['operation'],
-                        'kafka_topic': new_topic_name
+                        'application': app_name,
+                        'iot_connector': connector_id,
+                        'shadow': shadow_id,
+                        'endpoint': ep_id,
+                        'resource': res_id,
+                        'accessing': accessing,
+                        'operation': operation,
+                        'kafka_topic': a_topic
                     }
         """
 
@@ -312,7 +329,7 @@ def read_and_execute_action_from_buffer(sh_semaphore, sh_buffer, device_data, ka
                 kafka_producer  # FOR DEBUGGING
             )
 
-        elif message['operation'] == 'DELETE_OBSERVATION':  # Modify later
+        elif message['operation'] == 'DELETE_OBSERVATION':
             kafka_producer.send("LogTopic", {"[Leshan Monitor]": "Read DELETE_OBSERVATION operation."})
             delete_observation(
                 device_data['ip'],
