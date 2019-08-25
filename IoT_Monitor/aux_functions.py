@@ -194,7 +194,7 @@ def get_endpoint_id(leshan_id, token):
     return None
 
 
-def remove_old_topics(kafka_observe_topics, accessing_list, kafka_admin_client, kafka_producer):
+def remove_old_topics(kafka_observe_topics, accessing_list, kafka_admin_client):
     """
     For every url in accessing_list, we try to remove it from the kafka topic dict (if exists)
     accessing_list: (example)

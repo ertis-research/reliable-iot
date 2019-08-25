@@ -120,8 +120,7 @@ def get_data_stream(token, api_endpoint, device_data, shadow_device_id):
             aux_functions.remove_old_topics(
                 kafka_observe_topics,
                 endpoint['objectLinks'],
-                kafka_admin_client,
-                kafka_producer
+                kafka_admin_client
             )
             kafka_producer.send("LogTopic", {"[Leshan Monitor]": "All topics after deregistration event: {}.".format(kafka_observe_topics)})
 
