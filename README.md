@@ -178,3 +178,5 @@ services:
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock
 ```
+In order to run the test Python 3.x and kafka-python lybrary are required.
+Once all services are deployed on a Docker Stack, run the Test.py file and the LogConsumer.py and SecondApp.py in different terminals.
