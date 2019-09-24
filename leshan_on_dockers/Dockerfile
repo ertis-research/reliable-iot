@@ -1,7 +1,7 @@
 FROM ubuntu:14.04
 MAINTAINER Marcel mc-b Bernet <marcel.bernet@ch-open.ch>
 
-RUN apt-get update
+RUN apt-get update --fix-missing
 RUN apt-get install -y openjdk-7-jre-headless wget supervisor
 
 RUN mkdir -p /opt/leshan /var/log/supervisor

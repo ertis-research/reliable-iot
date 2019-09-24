@@ -1,0 +1,146 @@
+version: '3.2'
+
+#--------------------COMPOSE FILE FOR RASPBERRY PI CLUSTER------------------
+
+services:
+#--------------------DATABASE MONGODB------------------
+  mongo_db: 
+    image: webhippie/mongodb:latest        
+    ports:
+      - "27018:27017"
+      
+#--------------------RELIABLE IOT COMPONENTS------------------
+  mongoapi:
+    image: ertis/iotdatabase:latest
+    deploy:
+        replicas: 1
+        restart_policy:
+            condition: on-failure
+    ports:
+      - "8000:80"
+#----------------------------------------
+  iotregister:
+    image: ertis/iotregister
+    build: .
+    deploy:
+      replicas: 1
+    ports:
+      - "8001:80"
+    volumes: 
+      - type: bind
+        source: /var/run/docker.sock
+        target: /var/run/docker.sock
+
+#----------------------------------------
+  iotweb:
+    image: ertis/iotweb:latest
+    deploy:
+      replicas: 1
+      restart_policy:
+          condition: on-failure
+    ports:
+      - "8002:80"
+
+
+#----------------------------------------
+  iotshadowapplications:
+    image: ertis/iotshadowapp
+    deploy:
+      replicas: 1
+      restart_policy:
+          condition: on-failure
+    ports:
+      - "8003:80"
+
+
+#----------------------------------------
+  iotrecovery:
+    image: ertis/iotrecovery
+    deploy:
+      replicas: 1
+      restart_policy:
+          condition: on-failure
+    ports:
+      - "8004:80"
+        
+#--------------------LESHAN-SERVER-CLIENT------------------
+  leshan:
+    image: ertis/leshanondockers
+    deploy:
+      replicas: 1
+      restart_policy:
+          condition: on-failure
+    ports:
+      - target: 8080
+        published: 8005
+        protocol: tcp
+
+      - target: 5683
+        published: 5683
+        protocol: udp
+
+
+#--------------KAFKA-ZOOKEEPER-----------
+  zookeeper1:
+    image: zookeeper:3.5.4-beta
+    restart: always
+    ports:
+      - 2181:2181
+    environment:
+      ZOO_MY_ID: 1
+      ZOO_SERVERS: server.1=0.0.0.0:2888:3888;2181 server.2=zookeeper2:2888:3888;2181
+
+  zookeeper2:
+    image: zookeeper:3.5.4-beta
+    restart: always
+    ports:
+      - 2182:2181
+    environment:
+      ZOO_MY_ID: 2
+      ZOO_SERVERS: server.1=zookeeper1:2888:3888;2181 server.2=0.0.0.0:2888:3888;2181
+
+
+ 
+  kafka1:
+    image: ertis/kafka
+    ports:
+      - target: 9094
+        published: 9094
+        protocol: tcp
+        mode: host
+    environment:
+      HOSTNAME_COMMAND: "hostname"
+      KAFKA_ZOOKEEPER_CONNECT: zookeeper1:2181, zookeeper2:2181
+      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: INSIDE:PLAINTEXT,OUTSIDE:PLAINTEXT
+      KAFKA_ADVERTISED_LISTENERS: INSIDE://:9092,OUTSIDE://localhost:9094
+      KAFKA_LISTENERS: INSIDE://:9092,OUTSIDE://:9094
+      KAFKA_INTER_BROKER_LISTENER_NAME: INSIDE
+      KAFKA_BROKER_ID: 1
+      KAFKA_ZOOKEEPER_CONNECTION_TIMEOUT_MS: 36000
+      KAFKA_LOG_RETENTION_BYTES: -1
+      KAFKA_LOG_RETENTION_DAYS: 2
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+
+  kafka2:
+    image: ertis/kafka
+    ports:
+      - target: 9095
+        published: 9095
+        protocol: tcp
+        mode: host
+    environment:
+      HOSTNAME_COMMAND: "hostname"
+      KAFKA_ZOOKEEPER_CONNECT: zookeeper1:2181, zookeeper2:2181
+      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: INSIDE:PLAINTEXT,OUTSIDE:PLAINTEXT
+      KAFKA_ADVERTISED_LISTENERS: INSIDE://:9092,OUTSIDE://localhost:9095
+      KAFKA_LISTENERS: INSIDE://:9092,OUTSIDE://:9095
+      KAFKA_INTER_BROKER_LISTENER_NAME: INSIDE
+      KAFKA_BROKER_ID: 2
+      KAFKA_ZOOKEEPER_CONNECTION_TIMEOUT_MS: 36000
+      KAFKA_LOG_RETENTION_BYTES: -1
+      KAFKA_LOG_RETENTION_DAYS: 2
+      KAFKA_CREATE_TOPICS: "FailureTopic:2:2"
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+
