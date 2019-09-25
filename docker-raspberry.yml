@@ -1,4 +1,4 @@
-version: '3.2'
+version: '3.7'
 
 #--------------------COMPOSE FILE FOR RASPBERRY PI CLUSTER------------------
 
@@ -21,9 +21,11 @@ services:
 #----------------------------------------
   iotregister:
     image: ertis/iotregister
-    build: .
     deploy:
       replicas: 1
+      placement:
+        constraints:
+          - node.role == manager
     ports:
       - "8001:80"
     volumes: 
@@ -83,7 +85,12 @@ services:
 #--------------KAFKA-ZOOKEEPER-----------
   zookeeper1:
     image: zookeeper:3.5.4-beta
-    restart: always
+    deploy:
+      restart_policy:
+        condition: on-failure
+        delay: 5s
+        max_attempts: 100
+        window: 30s
     ports:
       - 2181:2181
     environment:
@@ -92,7 +99,12 @@ services:
 
   zookeeper2:
     image: zookeeper:3.5.4-beta
-    restart: always
+    deploy:
+      restart_policy:
+        condition: on-failure
+        delay: 5s
+        max_attempts: 100
+        window: 30s
     ports:
       - 2182:2181
     environment:
@@ -102,45 +114,61 @@ services:
 
  
   kafka1:
-    image: ertis/kafka
+    image: ertis/kafka:2.12-2.2.1
+    deploy:
+      restart_policy:
+        condition: on-failure
+        delay: 20s
+        max_attempts: 100
+        window: 30s
     ports:
       - target: 9094
         published: 9094
         protocol: tcp
         mode: host
     environment:
-      HOSTNAME_COMMAND: "hostname"
+      KAFKA_ADVERTISED_HOST_NAME: "hostname"
       KAFKA_ZOOKEEPER_CONNECT: zookeeper1:2181, zookeeper2:2181
       KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: INSIDE:PLAINTEXT,OUTSIDE:PLAINTEXT
       KAFKA_ADVERTISED_LISTENERS: INSIDE://:9092,OUTSIDE://localhost:9094
       KAFKA_LISTENERS: INSIDE://:9092,OUTSIDE://:9094
       KAFKA_INTER_BROKER_LISTENER_NAME: INSIDE
       KAFKA_BROKER_ID: 1
-      KAFKA_ZOOKEEPER_CONNECTION_TIMEOUT_MS: 36000
+      KAFKA_ZOOKEEPER_CONNECTION_TIMEOUT_MS: 360000
       KAFKA_LOG_RETENTION_BYTES: -1
       KAFKA_LOG_RETENTION_DAYS: 2
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock
 
   kafka2:
-    image: ertis/kafka
+    image: ertis/kafka:2.12-2.2.1
+    deploy:
+      restart_policy:
+        condition: on-failure
+        delay: 20s
+        max_attempts: 100
+        window: 30s
     ports:
       - target: 9095
         published: 9095
         protocol: tcp
         mode: host
     environment:
-      HOSTNAME_COMMAND: "hostname"
+      KAFKA_ADVERTISED_HOST_NAME: "hostname"
       KAFKA_ZOOKEEPER_CONNECT: zookeeper1:2181, zookeeper2:2181
       KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: INSIDE:PLAINTEXT,OUTSIDE:PLAINTEXT
       KAFKA_ADVERTISED_LISTENERS: INSIDE://:9092,OUTSIDE://localhost:9095
       KAFKA_LISTENERS: INSIDE://:9092,OUTSIDE://:9095
       KAFKA_INTER_BROKER_LISTENER_NAME: INSIDE
       KAFKA_BROKER_ID: 2
-      KAFKA_ZOOKEEPER_CONNECTION_TIMEOUT_MS: 36000
+      KAFKA_ZOOKEEPER_CONNECTION_TIMEOUT_MS: 360000
       KAFKA_LOG_RETENTION_BYTES: -1
       KAFKA_LOG_RETENTION_DAYS: 2
       KAFKA_CREATE_TOPICS: "FailureTopic:2:2"
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock
 
+# The name of the network 'reliableiot' is used by the Register to deploy new connectors
+networks:
+  default:
+    name: reliableiot

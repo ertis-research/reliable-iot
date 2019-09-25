@@ -45,7 +45,7 @@ def register(request):
                     'SHADOW_ID={}'.format(device_data_to_store['Shadow_id'])
                 ]
 
-                networks = ['IOT_default']
+                networks = ['reliableiot']
 
                 image, status_code, message = \
                     auxiliar_methods.get_docker_image(token, device_info['type'])
