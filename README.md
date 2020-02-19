@@ -1,9 +1,21 @@
-# Reliable-IoT
+# From the Edge to the Cloud: Enabling Reliable IoT Applications
 
-From the Edge to the Cloud: Enabling Reliable IoT Applications
-
-This project focuses on the application of fault-tolerance techniques for IoT systems
+This project focuses on the application of fault-tolerance techniques for IoT devices in mission-critical applications
 on a cloud-fog-edge architecture.
+
+This project is described in this [paper](https://ieeexplore.ieee.org/abstract/document/8972812). If you find this repository useful for your research, please consider citing:
+```
+@inproceedings{martin2019,
+  author={Mart{\'\i}n, Cristian and Garrido, Daniel and D{\'\i}az, Manuel and Rubio, Bartolom{\'e}},
+  booktitle={2019 7th International Conference on Future Internet of Things and Cloud (FiCloud), August 26-28, Istanbul, Turkey},
+  title={From the Edge to the Cloud: Enabling Reliable IoT Applications},
+  year={2019},
+  pages={17-22},
+  keywords={Internet of Things, Fault Tolerance, Container Virtualisation, Edge, Fog, Apache Kafka},  
+  doi={10.1109/FiCloud.2019.00011}
+}
+```
+
 
 ![Screenshot from 2019-05-21 16-55-39](https://user-images.githubusercontent.com/16557115/58107001-4fec6680-7be9-11e9-8641-d1d5f5df4c95.png)
 
@@ -50,3 +62,4 @@ docker stack deploy -c docker-compose-all.yml reliableiot
 ## Supported OSs:
 - ARMv7 -- Raspberry Pi
 - AMD64 --Linux
+
