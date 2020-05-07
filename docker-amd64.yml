@@ -9,21 +9,25 @@ services:
   mongoapi:
     image: ertis/iotdatabase
     deploy:
-        replicas: 3
+        replicas: 1
         restart_policy:
             condition: on-failure
     ports:
-      - "8000:80"
+      - target: 80
+        published: 8000
+        protocol: tcp
 #----------------------------------------
   iotregister:
     image: ertis/iotregister
     deploy:
-      replicas: 3
+      replicas: 1
       placement:
         constraints:
           - node.role == manager
     ports:
-      - "8001:80"
+      - target: 80
+        published: 8001
+        protocol: tcp
     volumes: 
       - type: bind
         source: /var/run/docker.sock
@@ -33,31 +37,37 @@ services:
   iotweb:
     image: ertis/iotweb
     deploy:
-      replicas: 3
+      replicas: 1
       restart_policy:
           condition: on-failure
     ports:
-      - "8002:80"
+      - target: 80
+        published: 8002
+        protocol: tcp
 
 #----------------------------------------
   iotshadowapplications:
     image: ertis/iotshadowapp
     deploy:
-      replicas: 3
+      replicas: 1
       restart_policy:
           condition: on-failure
     ports:
-      - "8003:80"
+      - target: 80
+        published: 8003
+        protocol: tcp
 
 #---------------------------------------
   iotrecovery:
     image: ertis/iotrecovery
     deploy:
-      replicas: 2
+      replicas: 1
       restart_policy:
           condition: on-failure
     ports:
-      - "8004:80"
+      - target: 80
+        published: 8004
+        protocol: tcp
 
 
 #--------------------LESHAN-SERVER-CLIENT------------------

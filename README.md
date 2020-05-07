@@ -21,15 +21,19 @@ This project is described in this [paper](https://ieeexplore.ieee.org/abstract/d
 
 This project requires a Docker Swarm cluster to deploy the system. Plese visit the [official page](https://docs.docker.com/engine/swarm/ )  for more information. 
 
-## Deploy the system on a Raspberry Pi Cluster
+## Deploy the system 
+
+### On a Raspberry Pi Cluster
 ```
 docker stack deploy -c docker-raspberry.yml reliableiot
 ```
 
-## Deploy the system on a Linux Cluster
+### On AMD64
 ```
 docker stack deploy -c docker-amd64.yml reliableiot
 ```
+
+Once deployed, you will have access to the Reliable Web UI at http://localhost:8002/
 
 ## Build and deploy the system on a Linux Cluster 
 
